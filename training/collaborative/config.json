@@ -1,0 +1,22 @@
+{
+  "factors": 32,
+  "max_epochs": 20,
+  "learning_rate": 0.007,
+  "learning_rate_decay": 0.97,
+  "regularization": 0.05,
+  "initial_stddev": 0.05,
+  "seed": 20260916,
+  "patience": 3,
+  "minimum_improvement": 0.0001,
+  "train_fraction": 0.8,
+  "validation_fraction": 0.1,
+  "minimum_item_train_ratings": 20,
+  "validation_sample_size": 200000,
+  "fold_in_users": 2000,
+  "fold_in_factors_regularization": 1.0,
+  "fold_in_bias_regularization": 10.0,
+  "minimum_history": 3,
+  "baseline_user_regularization": 10.0,
+  "baseline_item_regularization": 25.0,
+  "baseline_iterations": 10
+}

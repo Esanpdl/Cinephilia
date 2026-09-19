@@ -1,0 +1,3 @@
+# Upgrade together if YouTube changes its player.
+yt-dlp[default]>=2026.8.19
+imageio-ffmpeg==0.6.0

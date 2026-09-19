@@ -1,0 +1,15 @@
+{
+  "weights": {
+    "overview": 0.35,
+    "keywords": 0.25,
+    "genres": 0.20,
+    "cast": 0.10,
+    "directors": 0.10
+  },
+  "max_cast": 10,
+  "overview_max_features": 40000,
+  "overview_min_df": 2,
+  "overview_max_df": 0.95,
+  "neighbors_per_movie": 100,
+  "similarity_batch_size": 128
+}

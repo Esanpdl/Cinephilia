@@ -1,0 +1,4 @@
+# No third-party dependencies.
+#
+# Both scripts use only the Python standard library (urllib + subprocess/curl
+# fallback). Python 3.10+ is required (uses `X | None` type hints).

@@ -1,0 +1,6 @@
+# Offline extraction only; no fitting or Lightning job is required.
+numpy==1.26.4
+opencv-python==4.11.0.86
+Pillow==12.3.0
+rapidocr-onnxruntime==1.4.4
+onnxruntime==1.30.0
