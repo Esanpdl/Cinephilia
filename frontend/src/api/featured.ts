@@ -1,12 +1,27 @@
 import { useQuery } from '@tanstack/react-query'
-import { movieQuery, moviesQuery } from './queries'
+import { api } from './client'
+import type { MovieDetail } from './types'
 
 export const HIGHLIGHTS = { page_size: 6, ordering: 'rating', homepage: 'true' } as const
 
-/** Preserve rating order inside the approved homepage pool. */
+export const featuredMovieQuery = (seed?: string) => ({
+  queryKey: ['featured', seed],
+  staleTime: 0,
+  gcTime: 0,
+  queryFn: ({ signal }: { signal?: AbortSignal }) => {
+    const url = '/api/v1/movies/featured/' + (seed ? `?seed=${encodeURIComponent(seed)}` : '')
+    return api<MovieDetail>(url, { signal })
+  },
+})
+
+/** Tonight's feature is randomly selected from the 500 film analysis movies each refresh. */
 export function useFeaturedFilm() {
-  const catalog = useQuery(moviesQuery(HIGHLIGHTS))
-  const id = catalog.data?.results[0]?.tmdb_id
-  const detail = useQuery({ ...movieQuery(id || 0), enabled: !!id })
-  return { data: detail.data, isPending: catalog.isPending || (!!id && detail.isPending), isError: catalog.isError || detail.isError, error: catalog.error || detail.error, refetch: () => catalog.isError ? catalog.refetch() : detail.refetch() }
+  const query = useQuery(featuredMovieQuery())
+  return {
+    data: query.data,
+    isPending: query.isPending,
+    isError: query.isError,
+    error: query.error,
+    refetch: () => query.refetch(),
+  }
 }

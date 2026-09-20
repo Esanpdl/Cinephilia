@@ -1,4 +1,4 @@
-from django.db.models import Case, Exists, IntegerField, OuterRef, Prefetch, Q, Value, When
+from django.db.models import Avg, Case, Count, Exists, IntegerField, OuterRef, Prefetch, Q, Value, When
 
 from apps.movies.models import Movie, MovieCredit
 
@@ -18,7 +18,11 @@ def search_catalog(movies, query):
 
 
 def movie_details_queryset():
-    """Three queries for any page of details, including genres, cast and directors."""
+    """Single movie query with annotated community ratings plus genres, cast and directors."""
     return Movie.objects.prefetch_related(
         "genres", Prefetch("credits", queryset=MovieCredit.objects.select_related("person")),
+    ).annotate(
+        community_score_avg=Avg("user_ratings__score"),
+        community_rating_count=Count("user_ratings__id", distinct=True),
     )
+

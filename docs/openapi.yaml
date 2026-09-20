@@ -603,6 +603,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/MovieDetail'
           description: ''
+  /api/v1/movies/featured/:
+    get:
+      operationId: v1_movies_featured_retrieve
+      description: Return a randomly selected film from the 500 films selected for
+        film analysis on each refresh.
+      parameters:
+      - in: query
+        name: seed
+        schema:
+          type: string
+          maxLength: 128
+        description: Deterministic seed for repeatable selection.
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovieDetail'
+          description: ''
   /api/v1/movies/genres/:
     get:
       operationId: v1_movies_genres_list
@@ -940,9 +964,20 @@ paths:
         name: limit
         schema:
           type: integer
-          maximum: 60
+          maximum: 100
           minimum: 1
           default: 20
+      - in: query
+        name: offset
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      - in: query
+        name: refresh_seed
+        schema:
+          type: string
+          maxLength: 128
       tags:
       - v1
       security:
@@ -1145,6 +1180,11 @@ components:
             maxLength: 2000
           - type: string
             maxLength: 0
+        playback_sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlaybackSource'
+          readOnly: true
         source_title:
           type: string
           maxLength: 1000
@@ -1158,8 +1198,7 @@ components:
         quality: {}
         scope:
           type: string
-          default: Sampled trailer footage; these measurements do not describe the
-            entire film.
+          readOnly: true
         version:
           type: string
           maxLength: 40
@@ -1168,7 +1207,9 @@ components:
       - frames
       - metrics
       - palette
+      - playback_sources
       - preview
+      - scope
       - selection_rank
       - status
       - study_cards
@@ -1511,11 +1552,21 @@ components:
           type: string
           format: date-time
           readOnly: true
+        community_rating:
+          type: number
+          format: double
+          nullable: true
+          readOnly: true
+        community_rating_count:
+          type: integer
+          readOnly: true
       required:
       - backdrop_path
       - backdrop_url
       - cast
       - catalog_rank
+      - community_rating
+      - community_rating_count
       - directors
       - genres
       - imdb_id
@@ -1826,6 +1877,24 @@ components:
             type: integer
             maximum: 2147483647
             minimum: 0
+    PlaybackSource:
+      type: object
+      properties:
+        source_url:
+          type: string
+        title:
+          type: string
+        start:
+          type: number
+          format: double
+        end:
+          type: number
+          format: double
+      required:
+      - end
+      - source_url
+      - start
+      - title
     Profile:
       type: object
       properties:

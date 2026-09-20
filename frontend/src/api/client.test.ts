@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { api, ApiError, resetCsrf } from './client'
 import { safeNext } from '../auth/navigation'
+import { featuredMovieQuery } from './featured'
+import { recommendationsQuery } from './queries'
 
 /** Protocol-only fixtures. No fabricated film metadata or model results. */
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
@@ -57,5 +59,40 @@ describe('Post-login navigation', () => {
   it('keeps valid local return paths', () => { expect(safeNext('/films/238')).toBe('/films/238') })
   it('rejects external URLs, protocol-relative URLs, backslashes, and auth loops', () => {
     for (const value of ['https://example.com', '//example.com', '/\\example.com', '/login', '/register', null]) expect(safeNext(value)).toBe('/for-you')
+  })
+})
+
+describe('Featured and recommendation queries', () => {
+  it('featuredMovieQuery requests /api/v1/movies/featured/', async () => {
+    const fetcher = vi.spyOn(globalThis, 'fetch').mockResolvedValue(json({ tmdb_id: 278, title: 'The Shawshank Redemption' }))
+    const query = featuredMovieQuery()
+    expect(query.queryKey).toEqual(['featured', undefined])
+    expect(query.staleTime).toBe(0)
+    await query.queryFn({})
+    expect(fetcher.mock.calls[0][0]).toBe('/api/v1/movies/featured/')
+  })
+
+  it('featuredMovieQuery passes seed parameter when provided', async () => {
+    const fetcher = vi.spyOn(globalThis, 'fetch').mockResolvedValue(json({ tmdb_id: 278, title: 'The Shawshank Redemption' }))
+    const query = featuredMovieQuery('seed123')
+    expect(query.queryKey).toEqual(['featured', 'seed123'])
+    await query.queryFn({})
+    expect(fetcher.mock.calls[0][0]).toBe('/api/v1/movies/featured/?seed=seed123')
+  })
+
+  it('recommendationsQuery passes refresh_seed when provided', async () => {
+    const fetcher = vi.spyOn(globalThis, 'fetch').mockResolvedValue(json({ results: [] }))
+    const query = recommendationsQuery(1, 'seed456')
+    expect(query.queryKey).toEqual(['private', 1, 'recommendations', 'seed456', 0])
+    await (query.queryFn as any)({})
+    expect(fetcher.mock.calls[0][0]).toBe('/api/v1/recommendations/?limit=24&refresh_seed=seed456')
+  })
+
+  it('recommendationsQuery omits refresh_seed on initial load', async () => {
+    const fetcher = vi.spyOn(globalThis, 'fetch').mockResolvedValue(json({ results: [] }))
+    const query = recommendationsQuery(1)
+    expect(query.queryKey).toEqual(['private', 1, 'recommendations', undefined, 0])
+    await (query.queryFn as any)({})
+    expect(fetcher.mock.calls[0][0]).toBe('/api/v1/recommendations/?limit=24')
   })
 })

@@ -7,7 +7,7 @@ import { ApiError } from '../api/client'
 import { FilmActions } from '../components/FilmActions'
 import { FilmReviews } from '../components/FilmReviews'
 import { FilmCard, yearOf } from '../components/FilmCard'
-import { Button, EmptyState, PageError } from '../components/ui'
+import { Button, EmptyState, PageError, StarRating } from '../components/ui'
 
 export default function FilmDetail() {
   const { id = '' } = useParams()
@@ -36,8 +36,17 @@ export default function FilmDetail() {
         <div className="film-metadata"><span>{yearOf(film.release_date)}</span>{film.runtime !== null && <span>{film.runtime} min</span>}<span>{film.genres.map(genre => genre.name).join(' / ')}</span></div>
         {film.tagline && <p className="film-tagline">{film.tagline}</p>}
         <p className="detail-overview">{film.overview || 'A synopsis is not available for this film.'}</p>
-        <div className="tmdb-rating"><strong>{Number(film.vote_average).toFixed(1)}<small>/10</small></strong><span>TMDB audience rating<br /><small>{film.vote_count.toLocaleString()} votes</small></span></div>
-        <div className="letterboxd-rating"><iframe src={film.letterboxd_embed_url} title={film.title + ' — Letterboxd ratings'} loading="lazy" width="100%" height="300" referrerPolicy="strict-origin-when-cross-origin" /><a className="text-link" href={'https://letterboxd.com/tmdb/' + film.tmdb_id + '/'} target="_blank" rel="noopener noreferrer">View on Letterboxd</a></div>
+        <div className="detail-ratings-row">
+          <div className="tmdb-rating"><strong>{Number(film.vote_average).toFixed(1)}<small>/10</small></strong><span>TMDB audience rating<br /><small>{film.vote_count.toLocaleString()} votes</small></span></div>
+          <div className="community-rating">
+            <div className="community-rating-stars">
+              <StarRating value={film.community_rating ?? 0} size={18} />
+              {film.community_rating !== null && film.community_rating !== undefined ? <strong>{Number(film.community_rating).toFixed(1)}<small>/5</small></strong> : <strong>—<small>/5</small></strong>}
+            </div>
+            <span>Cinephilia community<br /><small>{film.community_rating_count ? `${film.community_rating_count.toLocaleString()} ${film.community_rating_count === 1 ? 'rating' : 'ratings'}` : 'No ratings yet'}</small></span>
+          </div>
+        </div>
+        <div className="letterboxd-rating"><iframe src={film.letterboxd_embed_url} title={film.title + ' — Letterboxd ratings'} loading="lazy" width="100%" height="100" referrerPolicy="strict-origin-when-cross-origin" /><a className="text-link" href={'https://letterboxd.com/tmdb/' + film.tmdb_id + '/'} target="_blank" rel="noopener noreferrer">View on Letterboxd</a></div>
         <FilmActions movieId={film.tmdb_id} />
       </div></div>
       <section className="trailer-section" id="trailer"><div className="section-heading compact"><div><p className="eyebrow">A first glimpse</p><h2>The <em>trailer.</em></h2></div><span className="muted-label">{film.trailer_official ? 'Official trailer' : 'Trailer'}</span></div>

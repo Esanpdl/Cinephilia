@@ -64,6 +64,10 @@ class MovieQuerySerializer(PageQuerySerializer):
         return attrs
 
 
+class FeaturedMovieQuerySerializer(serializers.Serializer):
+    seed = serializers.CharField(max_length=128, required=False, allow_blank=True, help_text="Deterministic seed for repeatable selection.")
+
+
 class MovieDetailSerializer(serializers.ModelSerializer):
     genres = serializers.SerializerMethodField()
     cast = serializers.SerializerMethodField()
@@ -74,6 +78,8 @@ class MovieDetailSerializer(serializers.ModelSerializer):
     is_technique_source = serializers.BooleanField(read_only=True)
     letterboxd_embed_url = serializers.SerializerMethodField()
     is_homepage_eligible = serializers.BooleanField(read_only=True)
+    community_rating = serializers.SerializerMethodField()
+    community_rating_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Movie
@@ -83,8 +89,24 @@ class MovieDetailSerializer(serializers.ModelSerializer):
             "genres", "keywords", "cast", "directors", "poster_path", "poster_url",
             "backdrop_path", "backdrop_url", "trailer_key", "trailer_name", "trailer_official",
             "trailer_embed_url", "letterboxd_embed_url", "source_tags", "is_technique_source", "is_homepage_eligible", "catalog_rank", "tmdb_synced_at",
+            "community_rating", "community_rating_count",
         ]
         read_only_fields = fields
+
+    @extend_schema_field(serializers.FloatField(allow_null=True))
+    def get_community_rating(self, movie) -> float | None:
+        if hasattr(movie, "community_score_avg"):
+            avg = movie.community_score_avg
+        else:
+            from django.db.models import Avg
+            avg = movie.user_ratings.aggregate(Avg("score"))["score__avg"]
+        return round(float(avg) / 2.0, 1) if avg is not None else None
+
+    @extend_schema_field(serializers.IntegerField())
+    def get_community_rating_count(self, movie) -> int:
+        if hasattr(movie, "community_rating_count"):
+            return movie.community_rating_count
+        return movie.user_ratings.count()
 
     def get_letterboxd_embed_url(self, movie) -> str:
         return f"https://embed.letterboxd.com/tmdb/{movie.tmdb_id}/embed-histogram/?theme=dark&noTitle=true"
@@ -92,6 +114,7 @@ class MovieDetailSerializer(serializers.ModelSerializer):
     @extend_schema_field(GenreSerializer(many=True))
     def get_genres(self, movie):
         return [{"tmdb_id": genre.tmdb_id, "name": genre.name} for genre in movie.genres.all()]
+
 
     @extend_schema_field(CastSerializer(many=True))
     def get_cast(self, movie):

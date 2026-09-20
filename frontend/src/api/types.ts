@@ -11,6 +11,7 @@ export interface MovieDetail extends MovieSummary {
   backdrop_url: string | null; trailer_key: string; trailer_name: string; trailer_official: boolean;
   letterboxd_embed_url: string;
   source_tags: string[]; catalog_rank: number | null;
+  community_rating: number | null; community_rating_count: number;
 }
 export interface Page<T> { count: number; next: string | null; previous: string | null; results: T[] }
 export interface Profile { display_name: string; bio: string; is_film_student: boolean; favorite_genres: number[] }

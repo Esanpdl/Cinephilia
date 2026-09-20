@@ -1,15 +1,75 @@
-"""Search the imported catalog without live TMDB requests."""
+import random
+import secrets
 from datetime import date
 from django.db.models import F, Q
+from django.http import Http404
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
-from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.generics import ListAPIView, RetrieveAPIView, get_object_or_404
 from rest_framework.permissions import AllowAny
 
+from apps.cinematography.models import TrailerAnalysis
 from .models import Genre, Movie
-from .serializers import GenreSerializer, MovieDetailSerializer, MovieQuerySerializer, MovieSummarySerializer
+from .serializers import (
+    FeaturedMovieQuerySerializer,
+    GenreSerializer,
+    MovieDetailSerializer,
+    MovieQuerySerializer,
+    MovieSummarySerializer,
+)
 from .services.presentation import MediaContextMixin
 from .services.queries import movie_details_queryset, search_catalog
+
+
+@extend_schema(
+    parameters=[FeaturedMovieQuerySerializer],
+    description="Return a randomly selected film from the 500 films selected for film analysis on each refresh.",
+    responses=MovieDetailSerializer,
+)
+class FeaturedMovieView(MediaContextMixin, RetrieveAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = MovieDetailSerializer
+    http_method_names = ["get", "head", "options"]
+
+    def get_object(self):
+        query_serializer = FeaturedMovieQuerySerializer(data=self.request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        seed = query_serializer.validated_data.get("seed")
+
+        candidate_ids = list(
+            TrailerAnalysis.objects.order_by("selection_rank").values_list("movie__tmdb_id", flat=True)
+        )
+        if not candidate_ids:
+            candidate_ids = list(
+                Movie.objects.filter(
+                    source_tags__overlap=[
+                        Movie.Source.LETTERBOXD,
+                        Movie.Source.TSPDT,
+                        Movie.Source.ANIMATION,
+                        Movie.Source.BLACKWHITE,
+                    ]
+                ).order_by("catalog_rank", "tmdb_id").values_list("tmdb_id", flat=True)[:500]
+            )
+        if not candidate_ids:
+            candidate_ids = list(
+                Movie.objects.order_by("catalog_rank", "tmdb_id").values_list("tmdb_id", flat=True)[:500]
+            )
+        if not candidate_ids:
+            raise Http404("No featured movies available.")
+
+        if seed:
+            rng = random.Random(seed)
+            chosen_id = rng.choice(candidate_ids)
+        else:
+            chosen_id = secrets.choice(candidate_ids)
+
+        return get_object_or_404(movie_details_queryset(), tmdb_id=chosen_id)
+
+    def retrieve(self, request, *args, **kwargs):
+        response = super().retrieve(request, *args, **kwargs)
+        response["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+        response["Pragma"] = "no-cache"
+        return response
 
 
 class MovieDetailView(MediaContextMixin, RetrieveAPIView):

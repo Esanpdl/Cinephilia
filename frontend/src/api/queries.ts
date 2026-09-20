@@ -21,9 +21,14 @@ export const genresQuery = () => queryOptions({
   queryKey: ['genres'], staleTime: 60 * 60_000,
   queryFn: ({ signal }) => api<Genre[]>('/api/v1/movies/genres/', { signal }),
 })
-export const recommendationsQuery = (userId: number) => queryOptions({
-  queryKey: ['private', userId, 'recommendations'], staleTime: 60_000,
-  queryFn: ({ signal }) => api<Recommendations>('/api/v1/recommendations/?limit=24', { signal }),
+export const recommendationsQuery = (userId: number, refreshSeed?: string, offset: number = 0) => queryOptions({
+  queryKey: ['private', userId, 'recommendations', refreshSeed, offset], staleTime: 60_000,
+  queryFn: ({ signal }) => {
+    const params = new URLSearchParams({ limit: '24' })
+    if (refreshSeed) params.set('refresh_seed', refreshSeed)
+    else if (offset > 0) params.set('offset', String(offset))
+    return api<Recommendations>('/api/v1/recommendations/?' + params.toString(), { signal })
+  },
 })
 export const libraryQuery = (userId: number, tab: 'watchlist' | 'ratings', page: number) => queryOptions({
   queryKey: ['private', userId, tab, page], staleTime: 60_000,

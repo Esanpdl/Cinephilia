@@ -3,8 +3,11 @@ from apps.movies.serializers import MovieSummarySerializer
 
 
 class RecommendationQuerySerializer(serializers.Serializer):
-    limit = serializers.IntegerField(min_value=1, max_value=60, default=20)
+    limit = serializers.IntegerField(min_value=1, max_value=100, default=20)
     exclude_watchlist = serializers.BooleanField(default=True)
+    offset = serializers.IntegerField(min_value=0, default=0, required=False)
+    refresh_seed = serializers.CharField(max_length=128, required=False, allow_blank=True)
+
 
 
 class ComponentSerializer(serializers.Serializer):

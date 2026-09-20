@@ -1,7 +1,7 @@
 import { motion, useReducedMotion } from 'motion/react'
 import type { HTMLMotionProps } from 'motion/react'
 import type { ReactNode } from 'react'
-import { ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react'
+import { ArrowLeft, ArrowRight, RotateCcw, Star } from 'lucide-react'
 import { errorMessage } from '../api/client'
 
 /** Be UI-inspired spring press feedback; original styles for Cinephilia.
@@ -28,3 +28,30 @@ export function Pagination({ page, count, pageSize = 20, onPage, disabled = fals
     <Button className="button-outline" disabled={page >= pages || disabled} onClick={() => onPage(page + 1)}>Next <ArrowRight size={16} /></Button>
   </nav>
 }
+
+export function StarRating({ value, max = 5, size = 15, className = '' }: { value: number; max?: number; size?: number; className?: string }) {
+  const clamped = Math.max(0, Math.min(max, value))
+  const rounded = Math.round(clamped * 2) / 2
+  return (
+    <span className={'star-rating-display ' + className} aria-label={`${value} out of ${max} stars`}>
+      {Array.from({ length: max }, (_, index) => {
+        const starIndex = index + 1
+        const isFull = rounded >= starIndex
+        const isHalf = !isFull && rounded >= starIndex - 0.5
+        return (
+          <span key={index} className="star-slot" style={{ position: 'relative', display: 'inline-flex', width: size, height: size }}>
+            <Star size={size} className="star-empty" />
+            {isFull ? (
+              <Star size={size} fill="currentColor" className="star-filled" style={{ position: 'absolute', top: 0, left: 0 }} />
+            ) : isHalf ? (
+              <span className="star-half-clip" style={{ position: 'absolute', top: 0, left: 0, width: '50%', height: size, overflow: 'hidden' }}>
+                <Star size={size} fill="currentColor" className="star-filled" />
+              </span>
+            ) : null}
+          </span>
+        )
+      })}
+    </span>
+  )
+}
+

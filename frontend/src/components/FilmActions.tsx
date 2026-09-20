@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bookmark, Check, Star } from 'lucide-react'
+import { Bookmark, Check } from 'lucide-react'
 import { useSession } from '../auth/SessionProvider'
 import { api, errorMessage } from '../api/client'
 import { filmStateQuery } from '../api/queries'
 import type { Rating, WatchlistItem } from '../api/types'
-import { Button } from './ui'
+import { Button, StarRating } from './ui'
 import { ReviewEditor } from './FilmReviews'
 
 export function FilmActions({ movieId }: { movieId: number }) {
@@ -22,6 +22,7 @@ export function FilmActions({ movieId }: { movieId: number }) {
   useEffect(() => { setDraft(existing) }, [existing, movieId])
   useEffect(() => { setNotice('') }, [movieId, id])
   function refresh() {
+    void cache.invalidateQueries({ queryKey: ['movie', movieId] })
     void cache.invalidateQueries({ queryKey: ['reviews', movieId] })
     void cache.invalidateQueries({ queryKey: ['private', id, 'review', movieId] })
     void cache.invalidateQueries({ queryKey: ['private', id, 'recommendations'] })
@@ -39,7 +40,7 @@ export function FilmActions({ movieId }: { movieId: number }) {
   if (!user) return <div className="film-actions guest-actions"><p>Some films deserve a place in your collection.</p><Link className="button button-light" to={'/login?next=' + encodeURIComponent(location.pathname)}>Sign in to rate & save</Link></div>
   return <section className="film-actions" aria-label="Your film collection">
     <Button className={watchlist.data ? 'button-saved' : 'button-outline'} disabled={watchlist.isPending || watchlist.isError || saveWatchlist.isPending} aria-pressed={!!watchlist.data} onClick={() => saveWatchlist.mutate(!!watchlist.data)}>{watchlist.data ? <Check size={18} /> : <Bookmark size={18} />}{saveWatchlist.isPending ? 'Saving…' : watchlist.data ? 'In your watchlist' : 'Add to watchlist'}</Button>
-    <fieldset className="rating-control" disabled={rating.isPending || rating.isError || saveRating.isPending}><legend><Star size={15} /> Your rating <span>{existing ? existing / 2 + ' / 5 stars' : 'Not rated yet'}</span></legend><div className="rating-options">{Array.from({ length: 10 }, (_, i) => i + 1).map(score => <label key={score} className={draft === score ? 'selected' : ''}><input type="radio" name={'rating-' + movieId} value={score} checked={draft === score} onChange={() => setDraft(score)} aria-label={score / 2 + ' out of 5 stars'} /><span>{score / 2}</span></label>)}</div><div className="rating-buttons"><Button className="button-light button-small" disabled={draft === null || draft === existing || saveRating.isPending} onClick={() => { if (draft !== null) saveRating.mutate(draft) }}>{saveRating.isPending ? 'Saving…' : 'Save rating'}</Button>{existing !== null && <button className="muted-action" onClick={() => saveRating.mutate(null)}>Remove rating</button>}</div></fieldset>
+    <fieldset className="rating-control" disabled={rating.isPending || rating.isError || saveRating.isPending}><legend className="rating-legend"><div className="rating-legend-left"><span className="rating-legend-title">Your rating</span><StarRating value={existing !== null ? existing / 2 : 0} size={15} /></div><span className="rating-legend-score">{existing !== null ? existing / 2 + ' / 5 stars' : 'Not rated yet'}</span></legend><div className="rating-options">{Array.from({ length: 10 }, (_, i) => i + 1).map(score => <label key={score} className={draft === score ? 'selected' : ''}><input type="radio" name={'rating-' + movieId} value={score} checked={draft === score} onChange={() => setDraft(score)} aria-label={score / 2 + ' out of 5 stars'} /><span>{score / 2}</span></label>)}</div><div className="rating-buttons"><Button className="button-light button-small" disabled={draft === null || draft === existing || saveRating.isPending} onClick={() => { if (draft !== null) saveRating.mutate(draft) }}>{saveRating.isPending ? 'Saving…' : 'Save rating'}</Button>{existing !== null && <button className="muted-action" onClick={() => saveRating.mutate(null)}>Remove rating</button>}</div></fieldset>
     {(rating.isError || watchlist.isError) && <p className="inline-error" role="alert">Your saved film information could not be loaded. <button onClick={() => { void rating.refetch(); void watchlist.refetch() }}>Retry</button></p>}
     {(saveRating.error || saveWatchlist.error) && <p className="inline-error" role="alert">{errorMessage(saveRating.error || saveWatchlist.error)}</p>}
     <p className="save-notice" role="status">{notice}</p>

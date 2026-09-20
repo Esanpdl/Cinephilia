@@ -9,6 +9,7 @@ describe('combined analysis timestamps map to original YouTube clips', () => {
   ]
   it('seeks inside the original clip rather than using the combined timestamp', () => {
     expect(playbackAt(parts, 150)?.embed).toBe('https://www.youtube-nocookie.com/embed/66gdMLbiS8Y?start=14')
+    expect(playbackAt(parts, 150)?.watchUrl).toBe('https://www.youtube.com/watch?v=66gdMLbiS8Y&t=14s')
     expect(playbackAt(parts, 135.44)?.embed).toContain('66gdMLbiS8Y?start=0')
     expect(playbackAt(parts, 135.43)?.embed).toContain('pTKfhyj2neg?start=135')
   })
