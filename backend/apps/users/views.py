@@ -10,7 +10,16 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from .authentication import CsrfSessionAuthentication
-from .serializers import CsrfSerializer, LoginSerializer, ProfileSerializer, RegisterSerializer, SessionSerializer, UserSerializer
+from .serializers import (
+    ChangePasswordSerializer,
+    CsrfSerializer,
+    LoginSerializer,
+    ProfileSerializer,
+    RegisterSerializer,
+    SessionSerializer,
+    UpdateCredentialsSerializer,
+    UserSerializer,
+)
 from .services.profiles import get_or_create_profile
 
 
@@ -68,11 +77,42 @@ class LogoutView(AuthView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class MeView(generics.RetrieveAPIView):
+class MeView(generics.RetrieveUpdateAPIView):
     serializer_class = UserSerializer
+    http_method_names = ["get", "patch", "head", "options"]
 
     def get_object(self):
-        return self.request.user
+        user = self.request.user
+        if user and user.is_authenticated:
+            get_or_create_profile(user)
+        return user
+
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return UpdateCredentialsSerializer
+        return UserSerializer
+
+    @extend_schema(request=UpdateCredentialsSerializer, responses={200: UserSerializer}, description="Update username or email credentials.")
+    def patch(self, request, *args, **kwargs):
+        serializer = UpdateCredentialsSerializer(request.user, data=request.data, partial=True, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(UserSerializer(user, context={"request": request}).data)
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(request=ChangePasswordSerializer, responses={200: SessionSerializer}, description="Change current user's password with current password verification.")
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response({
+            "detail": "Password updated successfully.",
+            "user": UserSerializer(user, context={"request": request}).data,
+            "csrf_token": get_token(request),
+        })
 
 
 class ProfileView(generics.RetrieveUpdateAPIView):

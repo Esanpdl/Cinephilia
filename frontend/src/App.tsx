@@ -12,6 +12,7 @@ const ForYou = lazy(() => import('./pages/ForYou'))
 const Collection = lazy(() => import('./pages/Collection'))
 const Account = lazy(() => import('./pages/Account'))
 const Students = lazy(() => import('./pages/Students'))
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
 
 export default function App() {
   return <MotionConfig reducedMotion="user"><BrowserRouter><Suspense fallback={<div className="route-loading" role="status">Bringing the picture into focus…</div>}><Routes><Route element={<Layout />}>
@@ -24,6 +25,7 @@ export default function App() {
     <Route path="for-you" element={<ProtectedPage><ForYou /></ProtectedPage>} />
     <Route path="collection" element={<ProtectedPage><Collection /></ProtectedPage>} />
     <Route path="account" element={<ProtectedPage><Account /></ProtectedPage>} />
+    <Route path="admin" element={<ProtectedPage><AdminDashboard /></ProtectedPage>} />
     <Route path="*" element={<EmptyState title="A scene we couldn't find."><p>This page isn't part of the picture.</p><Link to="/" className="button button-outline">Back to the beginning</Link></EmptyState>} />
   </Route></Routes></Suspense></BrowserRouter></MotionConfig>
 }

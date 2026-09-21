@@ -15,7 +15,15 @@ export interface MovieDetail extends MovieSummary {
 }
 export interface Page<T> { count: number; next: string | null; previous: string | null; results: T[] }
 export interface Profile { display_name: string; bio: string; is_film_student: boolean; favorite_genres: number[] }
-export interface User { id: number; username: string; email: string; is_staff?: boolean; profile: Profile }
+export interface User { id: number; username: string; email: string; is_staff: boolean; is_superuser?: boolean; is_main_admin?: boolean; profile: Profile }
+export interface AdminUser {
+  id: number; username: string; email: string; is_staff: boolean;
+  is_superuser: boolean; is_main_admin: boolean; display_name: string;
+  is_film_student: boolean; date_joined: string; last_login: string | null;
+}
+export interface AdminStats {
+  total_users: number; total_admins: number; total_movies: number; total_ratings: number;
+}
 export interface SessionResponse { user: User; csrf_token: string }
 export interface Rating { movie: MovieSummary; score: number; stars: number; created_at: string; updated_at: string }
 export interface Review { id: number; author: string; stars: number; text: string; updated_at: string; review_hidden?: boolean }

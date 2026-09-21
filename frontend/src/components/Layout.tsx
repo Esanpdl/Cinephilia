@@ -16,7 +16,14 @@ export function Layout() {
     window.addEventListener('keydown', close)
     return () => window.removeEventListener('keydown', close)
   }, [])
-  const links = [{ to: '/', label: 'Discover' }, { to: '/browse', label: 'Browse films' }, { to: '/for-you', label: 'For you' }, { to: '/collection', label: 'Your collection' }, { to: '/students', label: 'Film Analysis' }]
+  const links = [
+    { to: '/', label: 'Discover' },
+    { to: '/browse', label: 'Browse films' },
+    { to: '/for-you', label: 'For you' },
+    { to: '/collection', label: 'Your collection' },
+    { to: '/students', label: 'Film Analysis' },
+    ...(user?.is_staff ? [{ to: '/admin', label: 'Admin' }] : []),
+  ]
   return <>
     <a href="#main" className="skip-link">Skip to content</a>
     <header className="site-header">

@@ -7,6 +7,129 @@ info:
     tokens after login/register rotation. All movie IDs are TMDB IDs. User-owned data
     is private.
 paths:
+  /api/v1/admin-panel/stats/:
+    get:
+      operationId: v1_admin_panel_stats_retrieve
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminStats'
+          description: ''
+  /api/v1/admin-panel/users/:
+    get:
+      operationId: v1_admin_panel_users_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAdminUserListItemList'
+          description: ''
+  /api/v1/admin-panel/users/{user_id}/delete/:
+    delete:
+      operationId: v1_admin_panel_users_delete_destroy
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/admin-panel/users/{user_id}/demote/:
+    post:
+      operationId: v1_admin_panel_users_demote_create
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserListItem'
+          description: ''
+  /api/v1/admin-panel/users/{user_id}/promote/:
+    post:
+      operationId: v1_admin_panel_users_promote_create
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserListItem'
+          description: ''
+  /api/v1/admin-panel/users/create-admin/:
+    post:
+      operationId: v1_admin_panel_users_create_admin_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAdminRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateAdminRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateAdminRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateAdmin'
+          description: ''
   /api/v1/cinematography/cards/:
     get:
       operationId: v1_cinematography_cards_list
@@ -1059,6 +1182,97 @@ paths:
               schema:
                 $ref: '#/components/schemas/User'
           description: ''
+    patch:
+      operationId: v1_users_me_partial_update
+      description: Update username or email credentials.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateCredentialsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateCredentialsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateCredentialsRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/users/me/credentials/:
+    get:
+      operationId: v1_users_me_credentials_retrieve
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    patch:
+      operationId: v1_users_me_credentials_partial_update
+      description: Update username or email credentials.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateCredentialsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateCredentialsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateCredentialsRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/users/me/password/:
+    post:
+      operationId: v1_users_me_password_create
+      description: Change current user's password with current password verification.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+          description: ''
   /api/v1/users/me/profile/:
     get:
       operationId: v1_users_me_profile_retrieve
@@ -1128,6 +1342,78 @@ paths:
           description: ''
 components:
   schemas:
+    AdminStats:
+      type: object
+      properties:
+        total_users:
+          type: integer
+        total_admins:
+          type: integer
+        total_movies:
+          type: integer
+        total_ratings:
+          type: integer
+      required:
+      - total_admins
+      - total_movies
+      - total_ratings
+      - total_users
+    AdminUserListItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+        email:
+          type: string
+          format: email
+          readOnly: true
+          title: Email address
+        is_staff:
+          type: boolean
+          readOnly: true
+          title: Staff status
+          description: Designates whether the user can log into this admin site.
+        is_superuser:
+          type: boolean
+          readOnly: true
+          title: Superuser status
+          description: Designates that this user has all permissions without explicitly
+            assigning them.
+        is_main_admin:
+          type: boolean
+          readOnly: true
+        display_name:
+          type: string
+          readOnly: true
+        is_film_student:
+          type: boolean
+          readOnly: true
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
+        last_login:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - date_joined
+      - display_name
+      - email
+      - id
+      - is_film_student
+      - is_main_admin
+      - is_staff
+      - is_superuser
+      - last_login
+      - username
     AnalysisDetail:
       type: object
       properties:
@@ -1307,6 +1593,26 @@ components:
       - name
       - order
       - tmdb_id
+    ChangePasswordRequest:
+      type: object
+      properties:
+        current_password:
+          type: string
+          writeOnly: true
+          minLength: 1
+        new_password:
+          type: string
+          writeOnly: true
+          minLength: 1
+          maxLength: 128
+        confirm_password:
+          type: string
+          writeOnly: true
+          minLength: 1
+          maxLength: 128
+      required:
+      - current_password
+      - new_password
     Component:
       type: object
       properties:
@@ -1325,6 +1631,44 @@ components:
       - collaborative
       - content
       - popularity
+    CreateAdmin:
+      type: object
+      properties:
+        username:
+          type: string
+          maxLength: 30
+        email:
+          type: string
+          maxLength: 254
+        display_name:
+          type: string
+          maxLength: 100
+      required:
+      - email
+      - username
+    CreateAdminRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 30
+        email:
+          type: string
+          minLength: 1
+          maxLength: 254
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+          maxLength: 128
+        display_name:
+          type: string
+          maxLength: 100
+      required:
+      - email
+      - password
+      - username
     Csrf:
       type: object
       properties:
@@ -1678,6 +2022,29 @@ components:
       - stars
       - text
       - updated_at
+    PaginatedAdminUserListItemList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminUserListItem'
     PaginatedAnalysisSummaryList:
       type: object
       required:
@@ -1877,6 +2244,16 @@ components:
             type: integer
             maximum: 2147483647
             minimum: 0
+    PatchedUpdateCredentialsRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 30
+        email:
+          type: string
+          maxLength: 254
     PlaybackSource:
       type: object
       properties:
@@ -2273,6 +2650,15 @@ components:
           readOnly: true
           title: Staff status
           description: Designates whether the user can log into this admin site.
+        is_superuser:
+          type: boolean
+          readOnly: true
+          title: Superuser status
+          description: Designates that this user has all permissions without explicitly
+            assigning them.
+        is_main_admin:
+          type: boolean
+          readOnly: true
         profile:
           allOf:
           - $ref: '#/components/schemas/Profile'
@@ -2280,7 +2666,9 @@ components:
       required:
       - email
       - id
+      - is_main_admin
       - is_staff
+      - is_superuser
       - profile
       - username
     VisualMetrics:
