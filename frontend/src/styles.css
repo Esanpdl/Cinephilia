@@ -6,6 +6,46 @@
   --line: #39352f; --accent: #be392b; --serif: Georgia, 'Times New Roman', serif;
   --display: 'Oswald Variable', 'Arial Narrow', sans-serif;
 }
+.taste-page { padding-block: 62px 90px; }
+.taste-page .page-heading { margin-bottom: 38px; }
+.taste-layout { display: grid; grid-template-columns: minmax(190px, .7fr) minmax(0, 2fr); gap: 54px; align-items: start; }
+.taste-intro { color: var(--muted); display: grid; gap: 24px; padding-top: 25px; }
+.taste-intro > svg { color: #c17a62; }
+.taste-intro h2 { color: var(--paper); font-size: 31px; line-height: 1.25; }
+.taste-intro p { font-size: 13px; line-height: 1.9; max-width: 270px; }
+.taste-intro .text-link { color: var(--paper); }
+.taste-form { background: var(--panel); border: 1px solid var(--line); padding: 30px; min-width: 0; }
+.taste-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; border-bottom: 1px solid var(--line); margin-bottom: 30px; }
+.taste-steps button { background: none; color: var(--muted); font-size: 11px; text-align: left; padding: 0 0 17px; border-bottom: 2px solid transparent; }
+.taste-steps button span { display: block; font-size: 10px; margin-bottom: 6px; letter-spacing: .1em; }
+.taste-steps button[aria-current] { color: var(--paper); border-bottom-color: var(--accent); }
+.taste-step-heading { font-family: var(--serif); font-size: 29px; margin-bottom: 27px; }
+.taste-picker { min-width: 0; }
+.taste-picker legend, .taste-comfort legend { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.taste-picker legend > span { color: var(--muted); font-weight: 400; margin-left: 8px; }
+.taste-picker-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 25px; }
+.taste-selections { display: flex; flex-wrap: wrap; gap: 7px; margin-block: 12px; }
+.taste-chip { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #7e6650; background: #34291f; color: var(--paper); border-radius: 2px; padding: 7px 9px; font-size: 11px; text-align: left; min-height: 34px; }
+.taste-chip svg { flex: 0 0 auto; }
+.taste-picker .field { margin: 10px 0; }
+.taste-options { max-height: 285px; overflow-y: auto; border-block: 1px solid var(--line); overscroll-behavior: contain; }
+.taste-option { display: flex; gap: 11px; align-items: flex-start; padding: 13px 9px; font-size: 12px; cursor: pointer; border-bottom: 1px solid #ffffff09; }
+.taste-option:hover, .taste-option.selected { background: #ffffff05; }
+.taste-option input { accent-color: #bc7756; flex-shrink: 0; margin: 3px 0 0; width: 15px; height: 15px; }
+.taste-option:has(input:disabled) { opacity: .45; cursor: not-allowed; }
+.taste-option small { display: block; color: var(--muted); font-size: 11px; margin-top: 4px; }
+.taste-pagination, .taste-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.taste-pagination { padding-top: 10px; }
+.taste-pagination > span, .taste-footer > span { font-size: 10px; color: var(--muted); }
+.taste-picker-status, .taste-picker-error { font-size: 12px; color: var(--muted); padding: 18px 0; }
+.taste-picker-error .button { margin-top: 10px; }
+.taste-footer { border-top: 1px solid var(--line); margin-top: 30px; padding-top: 22px; }
+.taste-comfort { margin-bottom: 28px; }
+.taste-summary { margin-top: 25px; padding: 15px; border: 1px solid var(--line); font-size: 12px; }
+.taste-summary span { display: block; margin-top: 6px; color: var(--muted); }
+.recommendation-reason { font-size: 10px; line-height: 1.6; color: var(--muted); margin-top: 9px; }
+@media (max-width: 1000px) { .taste-layout { grid-template-columns: 1fr; gap: 25px; } .taste-intro { padding-top: 0; grid-template-columns: auto 1fr; gap: 16px; } .taste-intro h2 { font-size: 25px; } .taste-intro h2 br { display: none; } .taste-intro p { max-width: none; grid-column: 2; } .taste-intro .text-link { grid-column: 2; } }
+@media (max-width: 600px) { .taste-page { padding-block: 35px 55px; } .taste-form { padding: 19px 15px; } .taste-picker-grid { grid-template-columns: 1fr; } .taste-steps { gap: 9px; } .taste-steps button { font-size: 10px; } .taste-footer .button { padding: 11px; gap: 6px; font-size: 11px; } .taste-footer > span { display: none; } .taste-options { max-height: 245px; } }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; scroll-padding-top: 100px; }
 body { margin: 0; min-width: 320px; }
@@ -512,3 +552,9 @@ input[type=checkbox] { accent-color: #b3754d; }
   html { scroll-behavior: auto !important; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+.page-jump { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: .6rem; }
+.page-jump label { display: flex; align-items: center; gap: .5rem; }
+.page-jump input { width: 4.5rem; padding: .55rem; background: var(--surface, #24211f); color: inherit; border: 1px solid var(--border, #51473d); border-radius: 3px; text-align: center; }
+.quiz-categories { display: flex; flex-wrap: wrap; gap: .6rem; margin: 1rem 0 1.5rem; }
+.study-source-filters { display: flex; flex-wrap: wrap; gap: 1.2rem; margin-bottom: 1.5rem; }

@@ -29,6 +29,13 @@ async function readResponse(response: Response): Promise<unknown> {
 
 async function csrf(): Promise<string> {
   if (csrfToken) return csrfToken
+  if (typeof document !== 'undefined') {
+    const cookie = document.cookie.split(';').map(value => value.trim()).find(value => value.startsWith('csrftoken='))
+    if (cookie) {
+      csrfToken = decodeURIComponent(cookie.slice('csrftoken='.length))
+      return csrfToken
+    }
+  }
   if (!csrfRequest) csrfRequest = (async () => {
     const response = await fetch(API_ORIGIN + '/api/v1/users/csrf/', { credentials: 'include', cache: 'no-store' })
     const data = await readResponse(response) as { csrf_token?: string }

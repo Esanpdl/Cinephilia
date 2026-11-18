@@ -1,0 +1,55 @@
+/* Scoped to the curator's desk; shared site tokens keep it part of Cinephilia. */
+.admin-page { --admin-copper: #c09b80; }
+.admin-page .admin-header-row { align-items: center; margin-bottom: 25px; }
+.admin-page h1 { font-family: var(--display); font-size: clamp(38px, 5vw, 62px); line-height: 1.15; }
+.admin-cinema-accent { width: 240px; flex: 0 0 240px; margin: 0; padding: 6px; border: 1px solid #655142; background: var(--panel); }
+.admin-cinema-accent img { width: 100%; height: 122px; object-fit: cover; object-position: center 30%; display: block; filter: saturate(.6); }
+.admin-cinema-accent figcaption { font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--muted); padding: 8px 3px 2px; }
+.admin-page .admin-header-actions { flex-wrap: wrap; margin-bottom: 35px; }
+.admin-page .admin-user-pill { border-radius: 2px; font-weight: 400; color: #d9c8b9; }
+.admin-page .admin-metrics-grid { gap: 0; border-block: 1px solid var(--line); grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.admin-page .metric-card { border: 0; border-right: 1px solid var(--line); background: transparent; border-radius: 0; padding: 24px 20px; gap: 14px; }
+.admin-page .metric-card:last-child { border-right: 0; }
+.admin-page .metric-icon-wrap { width: 28px; height: 32px; border: 0; background: transparent; color: var(--admin-copper); }
+.admin-page .metric-value { display: block; font-size: 34px; font-weight: 400; margin-top: 8px; }
+.admin-page .metric-label { font-size: 10px; }
+.admin-page .admin-management-section { background: transparent; padding: 30px 0 0; border: 0; border-top: 1px solid var(--line); }
+.admin-page .admin-section-header h2 { font-family: var(--serif); text-transform: none; letter-spacing: -.02em; font-size: 28px; font-weight: 400; }
+.admin-page .admin-section-header p { max-width: 650px; line-height: 1.8; }
+.admin-page .admin-section-header .eyebrow { display: flex; align-items: center; gap: 9px; color: var(--admin-copper); font-size: 10px; margin-bottom: 12px; }
+.admin-page .badge-gold, .admin-page .badge-blue, .admin-page .protected-tag { color: #d3b397; background: #2b231e; border-color: #66503f; border-radius: 2px; }
+.admin-page .badge-gray { border-radius: 2px; }
+.admin-page .promote-btn, .admin-page .demote-btn { background: #29231e; color: #ddc8b5; border-color: #675344; }
+.admin-page .promote-btn:hover, .admin-page .demote-btn:hover { background: #3b3027; }
+.admin-page .delete-btn { background: #2b201d; color: #d9a397; border-color: #69453c; }
+.admin-page .admin-feedback-banner.success { background: #29231e; color: #ddc8b5; border-color: #675344; }
+.admin-page .admin-feedback-banner.error { background: #2b201d; color: #d9a397; border-color: #69453c; }
+.admin-page .route-loading { min-height: 160px; }
+.admin-review-section { margin-bottom: 55px; scroll-margin-top: 100px; }
+.admin-queue-count { white-space: nowrap; font-size: 12px; border: 1px solid #675344; padding: 7px 12px; color: #d3b397; }
+.admin-review-card { border-bottom: 1px solid var(--line); padding: 22px 0 28px; }
+.admin-review-card-heading { display: flex; justify-content: space-between; gap: 20px; align-items: center; }
+.admin-review-card-heading > div > a { font-size: 12px; color: var(--admin-copper); }
+.admin-review-card .field { margin-top: 20px; max-width: 700px; font-size: 12px; }
+.admin-review-card textarea { width: 100%; background: var(--panel); border: 1px solid var(--line); padding: 12px; resize: vertical; font: inherit; }
+.admin-review-actions { display: flex; gap: 12px; margin-top: 15px; }
+.admin-review-empty, .admin-review-feedback { font-size: 13px; color: var(--muted); padding: 15px 0; }
+@media (max-width: 800px) {
+  .admin-page .admin-metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-page .metric-card:nth-child(2) { border-right: 0; }
+  .admin-page .metric-card:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .admin-page .admin-header-row { align-items: flex-start; }
+  .admin-cinema-accent { width: 190px; flex-basis: 190px; }
+}
+@media (max-width: 520px) {
+  .admin-page .admin-header-row { flex-direction: column; }
+  .admin-cinema-accent { width: 190px; flex: initial; }
+  .admin-cinema-accent img { height: 85px; }
+  .admin-page .metric-card { padding: 18px 9px; gap: 8px; }
+  .admin-page .metric-label { letter-spacing: .05em; font-size: 9px; }
+  .admin-page .admin-header-actions { gap: 10px; }
+  .admin-page .admin-search-wrap, .admin-page .admin-search-wrap input { width: 100%; }
+  .admin-page .tab-btn { padding: 10px; }
+  .admin-review-card-heading { align-items: flex-start; }
+  .admin-page .admin-modal-dialog { padding: 22px; max-height: 90vh; overflow-y: auto; }
+}

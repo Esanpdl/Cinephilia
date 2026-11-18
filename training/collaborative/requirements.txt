@@ -1,5 +1,0 @@
-# Python 3.11/3.12; compatible with Lightning's provided environment.
-numpy==1.26.4
-scipy==1.17.1
-numba==0.61.2
-llvmlite==0.44.0

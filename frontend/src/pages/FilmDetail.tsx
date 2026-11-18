@@ -6,6 +6,7 @@ import { movieQuery } from '../api/queries'
 import { ApiError } from '../api/client'
 import { FilmActions } from '../components/FilmActions'
 import { FilmReviews } from '../components/FilmReviews'
+import ReviewedTechniques from '../components/ReviewedTechniques'
 import { FilmCard, yearOf } from '../components/FilmCard'
 import { Button, EmptyState, PageError, StarRating } from '../components/ui'
 
@@ -30,7 +31,7 @@ export default function FilmDetail() {
   return <article className="detail-page">
     <div className="detail-backdrop">{film.backdrop_url && <img src={film.backdrop_url} alt="" />}<div /></div>
     <div className="section-wrap detail-content"><Link className="text-link back-link" to="/browse"><ArrowLeft size={16} /> The collection</Link>
-      <div className="detail-layout"><aside className="detail-poster"><FilmCard movie={film} /></aside><div className="detail-main">
+      <div className="detail-layout"><aside className="detail-poster"><FilmCard movie={film} interactive={false} /></aside><div className="detail-main">
         <p className="eyebrow">The screening room</p><h1>{film.title}</h1>
         {film.directors.length > 0 && <p className="detail-director">Directed by {film.directors.map(person => person.name).join(' & ')}</p>}
         <div className="film-metadata"><span>{yearOf(film.release_date)}</span>{film.runtime !== null && <span>{film.runtime} min</span>}<span>{film.genres.map(genre => genre.name).join(' / ')}</span></div>
@@ -53,6 +54,7 @@ export default function FilmDetail() {
         {film.trailer_embed_url ? play ? <div className="trailer-player"><iframe src={film.trailer_embed_url} title={film.title + ' trailer'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen /></div> : <Button className="trailer-preview" onClick={() => setPlay(true)} aria-label={'Play ' + film.title + ' trailer'}>{film.backdrop_url && <img src={film.backdrop_url} alt="" loading="lazy" />}<span className="trailer-play-icon"><Play size={24} fill="currentColor" /></span><span>Watch the trailer</span></Button> : <div className="unavailable-media"><p>A trailer isn't available for this film.</p><span>You can still rate it or keep it on your watchlist.</span></div>}
       </section>
       {film.cast.length > 0 && <section className="cast-section"><div className="section-heading compact"><div><p className="eyebrow">The faces in the frame</p><h2>Cast & <em>characters.</em></h2></div></div><div className="cast-grid">{film.cast.slice(0, 12).map((person, index) => <div key={person.tmdb_id + '-' + index}><strong>{person.name}</strong><span>{person.character || 'Role unlisted'}</span></div>)}</div></section>}
+      <ReviewedTechniques key={'techniques-' + film.tmdb_id} movieId={film.tmdb_id} />
       <FilmReviews key={film.tmdb_id} movieId={film.tmdb_id} />
     </div>
   </article>

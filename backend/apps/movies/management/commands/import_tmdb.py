@@ -7,6 +7,7 @@ from math import ceil
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
+from django.core.cache import cache
 from django.db import connection, reset_queries
 from django.utils import timezone
 
@@ -149,4 +150,5 @@ class Command(BaseCommand):
                 batch, futures = next_batch, next_futures
         manifest["finished_at"] = timezone.now().isoformat()
         write_json(manifest_path, manifest)
+        cache.clear()
         self.stdout.write(self.style.SUCCESS(f"Import finished: {len(completed)} hydrated movies. Manifest: {manifest_path}"))

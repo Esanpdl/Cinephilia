@@ -60,7 +60,7 @@ class MovieReviewListView(ListAPIView):
         params = PageQuerySerializer(data=self.request.query_params)
         params.is_valid(raise_exception=True)
         movie = get_object_or_404(Movie, tmdb_id=self.kwargs["tmdb_id"])
-        return Rating.objects.filter(movie=movie, review_hidden=False).exclude(review_text="").select_related("user").order_by("-review_updated_at", "-pk")
+        return Rating.objects.filter(movie=movie, review_hidden=False, user__is_active=True).exclude(review_text="").select_related("user").order_by("-review_updated_at", "-pk")
 
 
 @extend_schema_view(

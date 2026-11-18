@@ -42,6 +42,7 @@ class ReviewWriteSerializer(serializers.Serializer):
 
 class ReviewSerializer(serializers.ModelSerializer):
     author = serializers.CharField(source="user.username", read_only=True)
+    author_id = serializers.IntegerField(source="user_id", read_only=True)
     stars = serializers.SerializerMethodField()
     text = serializers.CharField(source="review_text", read_only=True)
     updated_at = serializers.DateTimeField(source="review_updated_at", read_only=True)
@@ -51,7 +52,7 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Rating
-        fields = ["id", "author", "stars", "text", "updated_at"]
+        fields = ["id", "author", "author_id", "stars", "text", "updated_at"]
         read_only_fields = fields
 
 

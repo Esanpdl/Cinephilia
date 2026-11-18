@@ -1,0 +1,49 @@
+.search-trio { margin-block: 28px 35px; border: 1px solid var(--line); background: var(--panel); }
+.search-trio-intro { padding: 25px 28px; display: flex; align-items: center; justify-content: space-between; gap: 25px; }
+.search-trio-intro .eyebrow { color: #c17a62; margin-bottom: 10px; }
+.search-trio-intro h2 { font-family: var(--serif); font-size: 29px; line-height: 1.25; }
+.search-trio-intro p:last-child { color: var(--muted); font-size: 12px; margin-top: 10px; }
+.search-trio-intro > .button { flex-shrink: 0; }
+.trio-chevron-open { transform: rotate(180deg); }
+.search-trio-workspace { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); border-top: 1px solid var(--line); }
+.search-trio-catalogue, .search-trio-selection { padding: 25px 28px; min-width: 0; }
+.search-trio-selection { border-left: 1px solid var(--line); }
+.search-trio-search { display: flex; align-items: center; gap: 10px; }
+.search-trio-search > svg { flex-shrink: 0; color: var(--muted); }
+.search-trio-search input { width: 100%; min-width: 0; border: 0; background: transparent; padding: 12px 0; font-size: 13px; }
+.search-trio-help { color: var(--muted); font-size: 11px; line-height: 1.7; margin-block: 12px; }
+.search-trio-options { max-height: 350px; overflow-y: auto; overscroll-behavior: contain; border-block: 1px solid var(--line); }
+.search-trio-option { width: 100%; text-align: left; display: flex; gap: 12px; padding: 13px 8px; background: transparent; color: var(--paper); border-bottom: 1px solid #ffffff09; font-size: 13px; align-items: center; }
+.search-trio-option:hover, .search-trio-option.selected { background: #ffffff06; }
+.search-trio-option small { display: block; color: var(--muted); font-size: 10px; margin-top: 4px; }
+.search-trio-choice { display: inline-flex; align-items: center; justify-content: center; border: 1px solid #827a6d; width: 18px; height: 18px; flex-shrink: 0; }
+.search-trio-option.selected .search-trio-choice { border-color: #c17a62; background: #633f2c; }
+.search-trio-selection h3 { font-family: var(--serif); font-size: 25px; display: flex; justify-content: space-between; gap: 10px; margin-top: 10px; }
+.search-trio-selection h3 span { font-family: 'DM Sans Variable', sans-serif; font-size: 12px; color: var(--muted); align-self: center; }
+.search-trio-selection > ul { list-style: none; padding: 0; margin-block: 15px; }
+.search-trio-selection > ul li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+.search-trio-selection li small { color: var(--muted); }
+.search-trio-selection li button { display: flex; flex-shrink: 0; background: transparent; color: var(--muted); align-items: center; justify-content: center; width: 32px; height: 32px; }
+.search-trio-status { padding: 25px 8px; color: var(--muted); font-size: 12px; }
+.search-trio-status .button { margin-top: 12px; }
+.search-trio-catalogue .pagination { margin: 18px 0 0; padding: 0; }
+.search-trio-catalogue .pagination .button { min-height: 36px; padding: 7px 10px; font-size: 11px; }
+.search-trio-catalogue .pagination > span { font-size: 10px; }
+.search-trio-results { border-top: 1px solid var(--line); padding: 28px; }
+.search-trio-results-heading { margin-bottom: 25px; max-width: 740px; }
+.search-trio-results-heading h3 { font-family: var(--serif); font-size: 30px; margin-block: 8px; }
+.search-trio-results-heading > p:not(.eyebrow) { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.search-trio-films { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
+.search-trio-match { font-size: 11px; color: #cdb8a2; margin-top: 14px; }
+.search-trio-match strong { font-size: 21px; color: var(--paper); font-weight: 450; margin-right: 5px; }
+.search-trio-reasons { padding-left: 16px; font-size: 11px; line-height: 1.7; color: var(--muted); margin-block: 8px 0; }
+.search-trio-reasons li + li { margin-top: 5px; }
+.trio-discovery { border: 0; padding: 0; margin: 22px 0; min-width: 0; }
+.trio-discovery legend { font-size: 12px; margin-bottom: 12px; color: var(--paper); }
+.trio-discovery > div { display: flex; border: 1px solid var(--line); }
+.trio-discovery button { flex: 1; min-width: 0; padding: 11px 6px; font-size: 11px; background: transparent; color: var(--muted); border-right: 1px solid var(--line); }
+.trio-discovery button:last-child { border-right: 0; }
+.trio-discovery button[aria-pressed=true] { background: #483126; color: #edc0a5; box-shadow: inset 0 -2px #bd8067; }
+.trio-discovery p { color: var(--muted); font-size: 11px; line-height: 1.7; margin-top: 10px; }
+@media (max-width: 800px) { .search-trio-intro { align-items: flex-start; flex-direction: column; } .search-trio-workspace { grid-template-columns: 1fr; } .search-trio-selection { border-left: 0; border-top: 1px solid var(--line); } .search-trio-films { gap: 16px; } }
+@media (max-width: 520px) { .search-trio-intro, .search-trio-catalogue, .search-trio-selection, .search-trio-results { padding: 20px 16px; } .search-trio-intro h2 { font-size: 25px; } .search-trio-films { grid-template-columns: 1fr; gap: 30px; } .search-trio-films .film-card { max-width: 330px; width: 100%; margin-inline: auto; } .search-trio-options { max-height: 290px; } }

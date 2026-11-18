@@ -3,6 +3,8 @@ from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
 from .models import Technique, TechniqueSubmission, TrailerAnalysis, StudyCard
 from .services.source_review import SOURCE_LABELS
+from apps.movies.services.media import image_url
+from apps.movies.services.presentation import media_context
 
 
 def frame_url(frame) -> str:
@@ -21,14 +23,20 @@ class VisualMetricsSerializer(serializers.Serializer):
     contrast = serializers.FloatField(required=False)
     colored_pixel_fraction = serializers.FloatField(required=False)
     monochrome = serializers.BooleanField(required=False)
+    mean_chroma = serializers.FloatField(required=False)
+    vivid_pixel_fraction = serializers.FloatField(required=False)
+    colour_evidence_fraction = serializers.FloatField(required=False)
+    local_contrast = serializers.FloatField(required=False)
+    lightness_std = serializers.FloatField(required=False)
 
 
 class EvidenceFrameSerializer(serializers.Serializer):
+    technique_analysis = serializers.JSONField(required=False)
     index = serializers.IntegerField()
-    timestamp = serializers.FloatField()
+    timestamp = serializers.FloatField(allow_null=True)
     image = serializers.CharField()
     image_url = serializers.CharField()
-    crop = serializers.ListField(child=serializers.IntegerField())
+    crop = serializers.ListField(child=serializers.IntegerField(), required=False)
     metrics = VisualMetricsSerializer()
     text_excluded_fraction = serializers.FloatField()
     text_regions = serializers.ListField(child=serializers.ListField(child=serializers.ListField(child=serializers.FloatField())))
@@ -48,6 +56,7 @@ class TechniqueSerializer(serializers.ModelSerializer):
 
 
 class CardSerializer(serializers.ModelSerializer):
+    timestamp = serializers.SerializerMethodField()
     technique = TechniqueSerializer()
     tmdb_id = serializers.IntegerField(source='analysis.movie.tmdb_id')
     title = serializers.CharField(source='analysis.movie.title')
@@ -57,9 +66,24 @@ class CardSerializer(serializers.ModelSerializer):
     def get_image_url(self, obj) -> str:
         return frame_url({'image': obj.image})
 
+    def get_timestamp(self, obj) -> float | None:
+        return None if obj.analysis.version.startswith('supplied-stills') else obj.timestamp
+
     class Meta:
         model = StudyCard
         fields = ['id', 'tmdb_id', 'title', 'technique', 'timestamp', 'image_url', 'explanation', 'evidence', 'source_url']
+
+
+class PublishedCardSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    tmdb_id = serializers.IntegerField()
+    title = serializers.CharField()
+    technique = TechniqueSerializer()
+    timestamp = serializers.FloatField(allow_null=True)
+    image_url = serializers.CharField()
+    explanation = serializers.CharField()
+    evidence = serializers.CharField()
+    source_url = serializers.CharField(allow_blank=True)
 
 
 class AnalysisSummarySerializer(serializers.ModelSerializer):
@@ -67,6 +91,7 @@ class AnalysisSummarySerializer(serializers.ModelSerializer):
     title = serializers.CharField(source='movie.title')
     year = serializers.SerializerMethodField()
     preview = serializers.SerializerMethodField()
+    poster_url = serializers.SerializerMethodField()
     palette = serializers.SerializerMethodField()
     color_mode = serializers.SerializerMethodField()
 
@@ -74,7 +99,14 @@ class AnalysisSummarySerializer(serializers.ModelSerializer):
         return obj.movie.release_date.year if obj.movie.release_date else None
 
     def get_preview(self, obj) -> str | None:
+        if hasattr(obj, 'preview_frame'):
+            return frame_url(obj.preview_frame) if obj.status == 'ready' and obj.preview_frame else None
         return frame_url(obj.frames[0]) if obj.status == 'ready' and obj.frames else None
+
+    def get_poster_url(self, obj) -> str | None:
+        if not obj.movie.poster_path:
+            return None
+        return image_url(obj.movie.poster_path, media_context()['tmdb_configuration'])
 
     @extend_schema_field(PaletteColorSerializer(many=True))
     def get_palette(self, obj):
@@ -85,7 +117,7 @@ class AnalysisSummarySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TrailerAnalysis
-        fields = ['tmdb_id', 'title', 'year', 'selection_rank', 'status', 'reason', 'color_mode', 'palette', 'preview']
+        fields = ['tmdb_id', 'title', 'year', 'selection_rank', 'status', 'reason', 'color_mode', 'palette', 'preview', 'poster_url']
 
 
 class AnalysisDetailSerializer(AnalysisSummarySerializer):
@@ -94,10 +126,28 @@ class AnalysisDetailSerializer(AnalysisSummarySerializer):
     study_cards = serializers.SerializerMethodField()
     scope = serializers.SerializerMethodField()
     playback_sources = serializers.SerializerMethodField()
+    motion = serializers.SerializerMethodField()
+    quality = serializers.SerializerMethodField()
+
+    @extend_schema_field(serializers.DictField())
+    def get_quality(self, obj):
+        # Motion has its own source/status guard; do not leak an unguarded duplicate.
+        return {key: value for key, value in obj.quality.items() if key != 'motion'}
+
+    @extend_schema_field(serializers.DictField())
+    def get_motion(self, obj):
+        if obj.status != 'ready':
+            return {'status': 'unavailable'}
+        data = obj.quality.get('motion')
+        if not data:
+            return {'status': 'not_analyzed'}
+        if data.get('source_sha256') != obj.source_sha256:
+            return {'status': 'stale'}
+        return {key: value for key, value in data.items() if key not in {'signature', 'source_sha256', 'tmdb_id'}}
 
     @extend_schema_field(PlaybackSourceSerializer(many=True))
     def get_playback_sources(self, obj):
-        if obj.status != 'ready':
+        if obj.status != 'ready' or obj.quality.get('source_kind') == 'owner-supplied-stills':
             return []
         parts = obj.quality.get('source_components', [])
         if not parts:
@@ -108,6 +158,8 @@ class AnalysisDetailSerializer(AnalysisSummarySerializer):
                 for i, part in enumerate(parts)]
 
     def get_scope(self, obj) -> str:
+        if obj.quality.get('source_kind') == 'owner-supplied-stills':
+            return 'Measurements use all supplied still frames, including frames hidden from this gallery. They describe this image collection, not the entire film.'
         review = obj.quality.get('source_review', {})
         label = SOURCE_LABELS.get(review.get('source_kind'), 'Source video')
         note = review.get('source_note', '')
@@ -126,7 +178,7 @@ class AnalysisDetailSerializer(AnalysisSummarySerializer):
         return CardSerializer([c for c in obj.study_cards.all() if c.approved], many=True).data if obj.status == 'ready' else []
 
     class Meta(AnalysisSummarySerializer.Meta):
-        fields = AnalysisSummarySerializer.Meta.fields + ['frames', 'metrics', 'study_cards', 'source_url', 'playback_sources', 'source_title', 'duration', 'color_evidence', 'quality', 'scope', 'version']
+        fields = AnalysisSummarySerializer.Meta.fields + ['frames', 'metrics', 'study_cards', 'source_url', 'playback_sources', 'source_title', 'duration', 'color_evidence', 'quality', 'scope', 'version', 'motion']
 
 
 class StudentQuerySerializer(serializers.Serializer):
@@ -135,6 +187,8 @@ class StudentQuerySerializer(serializers.Serializer):
     color_mode = serializers.ChoiceField(choices=['color', 'black_and_white', 'mixed'], required=False)
     status = serializers.ChoiceField(choices=['ready', 'review', 'missing', 'failed'], required=False)
     technique = serializers.SlugField(required=False)
+    source = serializers.ChoiceField(choices=['all', 'human', 'model', 'measured'], default='all')
+    category = serializers.ChoiceField(choices=['all', 'framing', 'color'], default='all')
 
 
 class CompareQuerySerializer(serializers.Serializer):
@@ -186,9 +240,10 @@ class TagSerializer(serializers.ModelSerializer):
 
 class ModerationSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=['approved', 'rejected'])
+    expected_status = serializers.ChoiceField(choices=['pending', 'approved', 'rejected'], required=False)
     note = serializers.CharField(max_length=2000, required=False, allow_blank=True)
 
 
 class QuizAnswerSerializer(serializers.Serializer):
-    card_id = serializers.IntegerField(min_value=1)
+    card_id = serializers.CharField(max_length=80)
     answer = serializers.SlugField()

@@ -13,6 +13,17 @@ class GenreSerializer(serializers.Serializer):
     name = serializers.CharField()
 
 
+class MovieOptionSerializer(serializers.Serializer):
+    tmdb_id = serializers.IntegerField()
+    title = serializers.CharField()
+    year = serializers.IntegerField(allow_null=True)
+
+
+class MovieOptionsSerializer(serializers.Serializer):
+    count = serializers.IntegerField()
+    results = MovieOptionSerializer(many=True)
+
+
 class DirectorSerializer(serializers.Serializer):
     tmdb_id = serializers.IntegerField()
     name = serializers.CharField()
@@ -50,7 +61,7 @@ class MovieQuerySerializer(PageQuerySerializer):
     year = serializers.IntegerField(min_value=1895, required=False, help_text="Exact release year; 1895 through the current year. Cannot combine with a range.")
     year_from = serializers.IntegerField(min_value=1895, required=False, help_text="Inclusive first release year; defaults to 1895 when only year_to is supplied.")
     year_to = serializers.IntegerField(min_value=1895, required=False, help_text="Inclusive last release year; defaults to the current year when only year_from is supplied.")
-    ordering = serializers.ChoiceField(choices=["rating", "popularity", "newest", "title"], default="rating")
+    ordering = serializers.ChoiceField(choices=["rating", "browse_rating", "popularity", "newest", "title"], default="rating")
 
     def validate(self, attrs):
         current_year = timezone.now().year

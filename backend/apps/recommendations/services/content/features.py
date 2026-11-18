@@ -1,4 +1,4 @@
-"""Fit weighted TF-IDF metadata blocks. Called by the Lightning build script."""
+"""Fit weighted TF-IDF metadata blocks for the offline index build."""
 import math
 
 import numpy as np

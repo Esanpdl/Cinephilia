@@ -3,6 +3,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
+from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -89,8 +90,27 @@ class AdminDeleteUserView(APIView):
         target_user = get_object_or_404(User, pk=user_id)
         if target_user.id == request.user.id or is_main_admin_user(target_user):
             raise ValidationError("The main admin cannot be demoted, deleted, or stripped of admin privileges.")
-        target_user.delete()
+        target_user.is_active = False
+        target_user.save(update_fields=["is_active"])
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AdminSetUserActiveView(APIView):
+    permission_classes = [IsMainAdminUser]
+
+    class Input(serializers.Serializer):
+        is_active = serializers.BooleanField()
+
+    @extend_schema(request=Input, responses={200: AdminUserListItemSerializer})
+    def post(self, request, user_id):
+        target = get_object_or_404(User, pk=user_id)
+        if target.id == request.user.id or is_main_admin_user(target):
+            raise ValidationError("The main administrator's account status cannot be changed here.")
+        serializer = self.Input(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        target.is_active = serializer.validated_data['is_active']
+        target.save(update_fields=['is_active'])
+        return Response(AdminUserListItemSerializer(target).data)
 
 
 class AdminStatsView(APIView):

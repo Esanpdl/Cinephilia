@@ -1,0 +1,63 @@
+CINEPHILIA SETUP
+===============
+Run commands from the repository root. Requires Python 3.11, Node.js >=22.12
+and a PostgreSQL database with TLS. Do not copy .venv or node_modules.
+
+1. Install backend dependencies:
+   py -3.11 -m venv .venv
+   .\.venv\Scripts\python.exe -m pip install -r backend/requirements.txt
+
+2. Copy backend/.env.example to backend/.env (never overwrite existing secrets).
+   Supply DATABASE_URL and a unique DJANGO_SECRET_KEY. Use the Supabase direct
+   connection/session pooler on port 5432, not transaction pooling on 6543.
+   Supply your own TMDB and email configuration when using those integrations.
+   Frontend .env is optional; its example uses the Vite same-origin proxy.
+
+3. Prepare a NEW database:
+   .\.venv\Scripts\python.exe backend/manage.py prepare_database
+   .\.venv\Scripts\python.exe backend/manage.py migrate
+
+4. For the populated site, obtain the private runtime bundle separately. Replace
+   BUNDLE.zip below with its absolute path. Never upload it with this repository.
+   .\.venv\Scripts\python.exe scripts/runtime_bundle.py verify BUNDLE.zip
+   .\.venv\Scripts\python.exe scripts/runtime_bundle.py install-assets BUNDLE.zip
+   .\.venv\Scripts\python.exe backend/manage.py restore_catalog_bundle BUNDLE.zip
+   Restore requires empty reference tables and matching migrated columns. It
+   runs in a transaction and preserves database IDs/relationships. It excludes
+   all user accounts, ratings, watchlists, profiles, sessions and submissions.
+   Asset installation refuses conflicting existing files. Back up an existing
+   installation before attempting any data migration.
+
+5. Create your own administrator interactively:
+   .\.venv\Scripts\python.exe backend/manage.py create_initial_admin
+   This command does not reset existing administrator credentials.
+
+6. Install frontend dependencies and build:
+   cd frontend
+   npm ci
+   npm run build
+   cd ..
+
+7. Check and start:
+   .\.venv\Scripts\python.exe backend/manage.py check
+   .\.venv\Scripts\python.exe backend/manage.py migrate --check
+   powershell -ExecutionPolicy Bypass -File scripts/start_dev.ps1
+   Website: http://127.0.0.1:5173
+   API docs: http://127.0.0.1:8000/api/docs/
+   Logs: data/runtime (ignored by Git)
+   Alternatively run manage.py runserver and npm run dev in separate terminals.
+
+PRIVATE BUNDLE MAINTENANCE
+--------------------------
+The pack command uses an existing application database archive containing CSV
+files and manifest.json. It copies only the allowlisted reference tables, plus
+current local frames, colour signatures and active model directories. It never
+copies .env files or user tables. Choose a new output filename:
+   .\.venv\Scripts\python.exe scripts/runtime_bundle.py pack --output BUNDLE.zip --database-archive DATABASE_BACKUP.zip
+The bundle manifest records the source backup name and SHA-256 for each file.
+A dated backup may not reflect newer database changes. Retain original backups
+privately and independently; the sanitized handoff does not replace them.
+
+Production needs DEBUG=False, HTTPS, secure cookies, explicit hosts/CORS origins,
+a production server and appropriate per-process connection-pool limits. The
+public cache is per process; account responses are not shared public cache data.

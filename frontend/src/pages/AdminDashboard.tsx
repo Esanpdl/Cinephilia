@@ -1,34 +1,33 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, Navigate } from 'react-router-dom'
 import {
-  Film,
+  Clapperboard,
   Search,
-  Shield,
-  ShieldAlert,
-  ShieldCheck,
-  Star,
+  KeyRound,
+  LockKeyhole,
+  NotebookPen,
   Trash2,
   UserCheck,
   UserMinus,
   UserPlus,
-  Users,
+  ContactRound,
   X,
 } from 'lucide-react'
 import { useSession } from '../auth/SessionProvider'
 import { api, errorMessage } from '../api/client'
-import type { AdminStats, AdminUser, Page } from '../api/types'
+import type { AdminStats, AdminUser, Page, User } from '../api/types'
 import { Button, Pagination } from '../components/ui'
+import TechniqueReviewQueue from '../components/TechniqueReviewQueue'
+import '../admin.css'
 
 export default function AdminDashboard() {
   const { user } = useSession()
+  return user?.is_staff ? <AdminDashboardContent key={user.id} user={user} /> : <Navigate to="/" replace />
+}
+
+function AdminDashboardContent({ user }: { user: User }) {
   const cache = useQueryClient()
-
-  // Must be staff to view this page
-  if (!user?.is_staff) {
-    return <Navigate to="/" replace />
-  }
-
   const isMainAdmin = Boolean(user.is_main_admin)
 
   // Filters & Pagination
@@ -42,13 +41,13 @@ export default function AdminDashboard() {
 
   // Stats query
   const statsQuery = useQuery({
-    queryKey: ['admin-stats'],
+    queryKey: ['private', 'admin-stats', user.id],
     queryFn: () => api<AdminStats>('/api/v1/admin-panel/stats/'),
   })
 
   // Users list query
   const usersQuery = useQuery({
-    queryKey: ['admin-users', search, roleFilter, page],
+    queryKey: ['private', 'admin-users', user.id, search, roleFilter, page],
     queryFn: () => {
       const params = new URLSearchParams()
       if (search.trim()) params.set('search', search.trim())
@@ -57,6 +56,9 @@ export default function AdminDashboard() {
       return api<Page<AdminUser>>(`/api/v1/admin-panel/users/?${params.toString()}`)
     },
   })
+  useEffect(() => {
+    if (usersQuery.isSuccess && usersQuery.data.results.length === 0 && page > 1) setPage(value => value - 1)
+  }, [usersQuery.isSuccess, usersQuery.data?.results.length, page])
 
   // Promote user mutation
   const promoteMutation = useMutation({
@@ -64,8 +66,8 @@ export default function AdminDashboard() {
       api<AdminUser>(`/api/v1/admin-panel/users/${userId}/promote/`, { method: 'POST' }),
     onSuccess: target => {
       setActionMessage({ type: 'success', text: `Successfully promoted ${target.username} to Admin.` })
-      void cache.invalidateQueries({ queryKey: ['admin-users'] })
-      void cache.invalidateQueries({ queryKey: ['admin-stats'] })
+      void cache.invalidateQueries({ queryKey: ['private', 'admin-users', user.id] })
+      void cache.invalidateQueries({ queryKey: ['private', 'admin-stats', user.id] })
     },
     onError: err => {
       setActionMessage({ type: 'error', text: errorMessage(err) })
@@ -78,8 +80,8 @@ export default function AdminDashboard() {
       api<AdminUser>(`/api/v1/admin-panel/users/${userId}/demote/`, { method: 'POST' }),
     onSuccess: target => {
       setActionMessage({ type: 'success', text: `Successfully demoted ${target.username} from Admin.` })
-      void cache.invalidateQueries({ queryKey: ['admin-users'] })
-      void cache.invalidateQueries({ queryKey: ['admin-stats'] })
+      void cache.invalidateQueries({ queryKey: ['private', 'admin-users', user.id] })
+      void cache.invalidateQueries({ queryKey: ['private', 'admin-stats', user.id] })
     },
     onError: err => {
       setActionMessage({ type: 'error', text: errorMessage(err) })
@@ -91,13 +93,23 @@ export default function AdminDashboard() {
     mutationFn: (userId: number) =>
       api<void>(`/api/v1/admin-panel/users/${userId}/delete/`, { method: 'DELETE' }),
     onSuccess: () => {
-      setActionMessage({ type: 'success', text: 'User removed successfully.' })
-      void cache.invalidateQueries({ queryKey: ['admin-users'] })
-      void cache.invalidateQueries({ queryKey: ['admin-stats'] })
+      setActionMessage({ type: 'success', text: 'Account deactivated. Ratings, watchlists and contributions were retained.' })
+      void cache.invalidateQueries({ queryKey: ['private', 'admin-users', user.id] })
+      void cache.invalidateQueries({ queryKey: ['private', 'admin-stats', user.id] })
     },
     onError: err => {
       setActionMessage({ type: 'error', text: errorMessage(err) })
     },
+  })
+
+  const activeMutation = useMutation({
+    mutationFn: ({ userId, isActive }: { userId: number; isActive: boolean }) =>
+      api<AdminUser>(`/api/v1/admin-panel/users/${userId}/active/`, { method: 'POST', body: { is_active: isActive } }),
+    onSuccess: account => {
+      setActionMessage({ type: 'success', text: account.is_active ? `Restored ${account.username}'s account.` : `Deactivated ${account.username}'s account.` })
+      void cache.invalidateQueries({ queryKey: ['private', 'admin-users', user.id] })
+    },
+    onError: err => setActionMessage({ type: 'error', text: errorMessage(err) }),
   })
 
   // Add new admin mutation
@@ -109,8 +121,8 @@ export default function AdminDashboard() {
       setActionMessage({ type: 'success', text: `Admin account '${newAdmin.username}' created successfully!` })
       setShowAddModal(false)
       setAddError(null)
-      void cache.invalidateQueries({ queryKey: ['admin-users'] })
-      void cache.invalidateQueries({ queryKey: ['admin-stats'] })
+      void cache.invalidateQueries({ queryKey: ['private', 'admin-users', user.id] })
+      void cache.invalidateQueries({ queryKey: ['private', 'admin-stats', user.id] })
     },
     onError: err => {
       setAddError(errorMessage(err))
@@ -128,11 +140,11 @@ export default function AdminDashboard() {
             <span className="admin-user-pill">
               {isMainAdmin ? (
                 <>
-                  <ShieldCheck size={16} className="gold-icon" /> Main Administrator (Owner)
+                  <KeyRound size={16} aria-hidden="true" /> Main Administrator (Owner)
                 </>
               ) : (
                 <>
-                  <Shield size={16} className="blue-icon" /> Staff Administrator
+                  <KeyRound size={16} aria-hidden="true" /> Staff Administrator
                 </>
               )}
             </span>
@@ -140,7 +152,10 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+        <figure className="admin-cinema-accent"><img src="/images/cinema-collage.jpg" alt="A collage of classic film posters" /><figcaption>For the love of cinema.</figcaption></figure>
+      </div>
         <div className="admin-header-actions">
+          <a className="button button-outline" href="#technique-review"><NotebookPen size={16} aria-hidden="true" /> Review submissions</a>
           <Link to="/account" className="button button-outline">
             My Account Settings
           </Link>
@@ -156,13 +171,12 @@ export default function AdminDashboard() {
             </Button>
           )}
         </div>
-      </div>
 
       {/* Metrics Grid */}
       <div className="admin-metrics-grid">
         <div className="metric-card">
           <div className="metric-icon-wrap">
-            <Users size={22} className="gold-icon" />
+            <ContactRound size={22} aria-hidden="true" />
           </div>
           <div>
             <span className="metric-label">Total Users</span>
@@ -174,7 +188,7 @@ export default function AdminDashboard() {
 
         <div className="metric-card">
           <div className="metric-icon-wrap">
-            <ShieldCheck size={22} className="gold-icon" />
+            <KeyRound size={22} aria-hidden="true" />
           </div>
           <div>
             <span className="metric-label">Administrators</span>
@@ -186,7 +200,7 @@ export default function AdminDashboard() {
 
         <div className="metric-card">
           <div className="metric-icon-wrap">
-            <Film size={22} className="gold-icon" />
+            <Clapperboard size={22} aria-hidden="true" />
           </div>
           <div>
             <span className="metric-label">Catalog Movies</span>
@@ -198,7 +212,7 @@ export default function AdminDashboard() {
 
         <div className="metric-card">
           <div className="metric-icon-wrap">
-            <Star size={22} className="gold-icon" />
+            <NotebookPen size={22} aria-hidden="true" />
           </div>
           <div>
             <span className="metric-label">Community Ratings</span>
@@ -328,6 +342,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      <TechniqueReviewQueue userId={user.id} />
       {/* User Management Section */}
       <section className="admin-management-section">
         <div className="admin-section-header">
@@ -421,7 +436,7 @@ export default function AdminDashboard() {
                             {(account.display_name || account.username).slice(0, 1).toUpperCase()}
                           </span>
                           <div>
-                            <strong>{account.username}</strong>
+                            <strong>{account.username}</strong>{!account.is_active && <span className="user-display-sub">Deactivated</span>}
                             {account.display_name && (
                               <span className="user-display-sub">{account.display_name}</span>
                             )}
@@ -436,11 +451,11 @@ export default function AdminDashboard() {
                       <td>
                         {isAccountMainAdmin ? (
                           <span className="badge badge-gold">
-                            <ShieldCheck size={13} /> Main Admin
+                            <KeyRound size={13} aria-hidden="true" /> Main Admin
                           </span>
                         ) : isAccountStaff ? (
                           <span className="badge badge-blue">
-                            <Shield size={13} /> Staff Admin
+                            <KeyRound size={13} aria-hidden="true" /> Staff Admin
                           </span>
                         ) : (
                           <span className="badge badge-gray">Member</span>
@@ -461,9 +476,9 @@ export default function AdminDashboard() {
                         <div className="action-button-group">
                           {isAccountMainAdmin ? (
                             <span className="protected-tag" title="The main administrator cannot be demoted or deleted.">
-                              <ShieldAlert size={14} /> Protected
+                              <LockKeyhole size={14} aria-hidden="true" /> Protected
                             </span>
-                          ) : isMainAdmin ? (
+                          ) : isMainAdmin ? account.is_active ? (
                             <>
                               {isAccountStaff ? (
                                 <button
@@ -498,11 +513,11 @@ export default function AdminDashboard() {
                               <button
                                 type="button"
                                 className="admin-action-btn delete-btn"
-                                title="Remove User"
-                                aria-label={`Permanently delete user ${account.username}`}
+                                title="Deactivate account"
+                                aria-label={`Deactivate user ${account.username}`}
                                 disabled={deleteMutation.isPending}
                                 onClick={() => {
-                                  if (window.confirm(`Are you sure you want to permanently delete user ${account.username}?`)) {
+                                  if (window.confirm(`Deactivate ${account.username}? They will lose login access. Their ratings, watchlists and contributions will remain.`)) {
                                     deleteMutation.mutate(account.id)
                                   }
                                 }}
@@ -510,6 +525,8 @@ export default function AdminDashboard() {
                                 <Trash2 size={15} />
                               </button>
                             </>
+                          ) : (
+                            <button type="button" className="admin-action-btn promote-btn" disabled={activeMutation.isPending} onClick={() => activeMutation.mutate({ userId: account.id, isActive: true })}>Restore</button>
                           ) : (
                             <span className="readonly-tag">Managed by Main Admin</span>
                           )}

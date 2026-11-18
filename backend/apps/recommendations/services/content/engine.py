@@ -10,6 +10,7 @@ from .artifacts import read_manifest
 from .contracts import ContentIndexError, MovieNotIndexed, SimilarMovie
 from .metadata import FIELDS, identities
 from .ranking import rank_scores
+from ..discovery_metadata import meaningful_keywords
 
 
 def valid_id(value):
@@ -104,6 +105,51 @@ class TfidfContentService:
 
     def movie(self, tmdb_id):
         return self.movies[self._row(tmdb_id)]
+
+    @lru_cache(maxsize=10)
+    def _normalized_field(self, field, discovery=False):
+        start, end = self.schema['fields'][field]
+        block = self.matrix[:, start:end]
+        if discovery and field == 'keywords':
+            allowed = {key for movie in self.movies for key in meaningful_keywords(movie)}
+            mask = np.asarray([int(term.split(':')[1]) in allowed for term in self.schema['vocabulary'][field]])
+            block = block.multiply(mask).tocsr()
+        norms = np.sqrt(np.asarray(block.multiply(block).sum(axis=1)).ravel())
+        inverse = np.divide(1., norms, out=np.zeros_like(norms), where=norms > 0)
+        return block.multiply(inverse[:, None]).tocsr()
+
+    def score_discovery(self, tmdb_id, candidate_ids, weights):
+        """Reweight independently normalized metadata fields for request-local discovery.
+
+        The trained artifacts and the main recommendation scoring stay unchanged.
+        """
+        row = self._row(tmdb_id)
+        known = [mid for mid in candidate_ids if mid in self.rows]
+        result = dict.fromkeys(candidate_ids, 0.0)
+        if known:
+            values = np.zeros(len(known))
+            indices = [self.rows[mid] for mid in known]
+            for field, weight in weights.items():
+                block = self._normalized_field(field, discovery=True)
+                if block.shape[1] and weight:
+                    values += weight * (block[indices] @ block[row].T).toarray().ravel()
+            result.update({mid: float(np.clip(value, 0, 1)) for mid, value in zip(known, values)})
+        return result
+
+    def explain_discovery(self, source_id, target_id, weights):
+        source, target = self._row(source_id), self._row(target_id)
+        contributions = {field: float(self._normalized_field(field, True)[source].multiply(self._normalized_field(field, True)[target]).sum()) * weight
+                         for field, weight in weights.items()}
+        explanation = self.explain(source_id, target_id)
+        left, right = meaningful_keywords(self.movies[source]), meaningful_keywords(self.movies[target])
+        # Rank shared facts by their actual TF-IDF contribution, not TMDB ID.
+        start, _ = self.schema['fields']['keywords']
+        block = self._normalized_field('keywords', True)
+        products = block[source].multiply(block[target]).tocoo()
+        strength = {int(self.schema['vocabulary']['keywords'][col].split(':')[1]): float(value) for col, value in zip(products.col, products.data)}
+        explanation['shared']['keywords'] = [left[key] for key in sorted(left.keys() & right.keys(), key=lambda key: (-strength.get(key, 0), key))]
+        explanation['contributions'] = contributions
+        return explanation
 
     def contains(self, tmdb_id):
         valid_id(tmdb_id)

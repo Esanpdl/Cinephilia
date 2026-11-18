@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowDown, ArrowRight, ArrowUpRight, Play } from 'lucide-react'
 import { useSession } from '../auth/SessionProvider'
@@ -52,6 +53,14 @@ export default function Home() {
 }
 
 function ThemedRow({ theme, title, note, number }: { theme: string; title: string; note: string; number: number }) {
-  const films = useQuery(moviesQuery({ homepage: 'true', theme, page_size: 6, ordering: 'rating' }))
-  return <section className="section-wrap essentials-section" aria-label={title}><div className="section-heading compact"><div><p className="eyebrow"><span>{String(number).padStart(2, '0')}</span> {note}</p><h2><em>{title}.</em></h2></div><Link className="text-link" to={'/browse?homepage=true&theme=' + theme}>View all <ArrowUpRight size={17} /></Link></div>{films.isPending ? <GridSkeleton /> : films.isError ? <PageError error={films.error} retry={() => { void films.refetch() }} /> : <div className="film-grid">{films.data.results.map(movie => <FilmCard key={movie.tmdb_id} movie={movie} />)}</div>}</section>
+  const section = useRef<HTMLElement>(null)
+  const [nearby, setNearby] = useState(false)
+  useEffect(() => {
+    if (!('IntersectionObserver' in window)) { setNearby(true); return }
+    const observer = new IntersectionObserver(entries => { if (entries.some(entry => entry.isIntersecting)) { setNearby(true); observer.disconnect() } }, { rootMargin: '600px' })
+    if (section.current) observer.observe(section.current)
+    return () => observer.disconnect()
+  }, [])
+  const films = useQuery({ ...moviesQuery({ homepage: 'true', theme, page_size: 6, ordering: 'rating' }), enabled: nearby })
+  return <section ref={section} className="section-wrap essentials-section" aria-label={title}><div className="section-heading compact"><div><p className="eyebrow"><span>{String(number).padStart(2, '0')}</span> {note}</p><h2><em>{title}.</em></h2></div><Link className="text-link" to={'/browse?homepage=true&theme=' + theme}>View all <ArrowUpRight size={17} /></Link></div>{films.isPending ? <GridSkeleton /> : films.isError ? <PageError error={films.error} retry={() => { void films.refetch() }} /> : <div className="film-grid">{films.data.results.map(movie => <FilmCard key={movie.tmdb_id} movie={movie} />)}</div>}</section>
 }

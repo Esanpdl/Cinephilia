@@ -1,7 +1,7 @@
 # Start only Cinephilia's local development services; keep their windows hidden.
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
-$logDirectory = Join-Path $projectRoot 'data/phase6'
+$logDirectory = Join-Path $projectRoot 'data/runtime'
 New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
 
 function Test-LocalPort([int]$Port) {

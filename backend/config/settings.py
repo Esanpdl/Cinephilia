@@ -1,5 +1,6 @@
 """Environment-driven settings for the separate Django REST backend."""
 from pathlib import Path
+import sys
 
 import environ
 from django.core.exceptions import ImproperlyConfigured
@@ -75,11 +76,14 @@ database.setdefault("OPTIONS", {}).update({
     "sslmode": ssl_mode,
     "connect_timeout": 10,
     # Keep Django auth/session tables outside Supabase's default public Data API.
-    "options": "-c search_path=cinephilia",
+    "options": "-c search_path=public" if "test" in sys.argv[1:] else "-c search_path=cinephilia",
 })
-# runserver uses a fresh thread per request. Persistent connections there can
-# exhaust the Supabase session pool; production workers may reuse connections.
-database["CONN_MAX_AGE"] = 0 if DEBUG else env.int("DATABASE_CONN_MAX_AGE", default=60)
+# A bounded psycopg pool reuses connections across runserver request threads.
+# CONN_MAX_AGE=0 returns the connection to the pool after every request.
+database["CONN_MAX_AGE"] = 0
+if env.bool('DATABASE_POOL_ENABLED', default=True) and 'test' not in sys.argv[1:]:
+    database['OPTIONS']['pool'] = {'min_size': 0, 'max_size': env.int('DATABASE_POOL_MAX_SIZE', default=4),
+                                   'max_idle': 60, 'max_lifetime': 600, 'timeout': 20}
 database["CONN_HEALTH_CHECKS"] = True
 
 REST_FRAMEWORK = {
@@ -88,7 +92,7 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_PAGINATION_CLASS": "config.api.CatalogPagination",
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    "DEFAULT_THROTTLE_RATES": {"login": "10/min", "register": "5/hour"},
+    "DEFAULT_THROTTLE_RATES": {"login": "10/min", "register": "5/hour", "password_reset": "5/hour", "password_reset_confirm": "10/hour"},
     "PAGE_SIZE": 20,
 }
 SPECTACULAR_SETTINGS = {
@@ -174,4 +178,12 @@ COLLABORATIVE_SERVICE_CLASS = env(
 HYBRID_WEIGHTS = {"content": env.float("HYBRID_CONTENT_WEIGHT", default=0.45), "collaborative": env.float("HYBRID_COLLABORATIVE_WEIGHT", default=0.40), "popularity": env.float("HYBRID_POPULARITY_WEIGHT", default=0.15)}
 HYBRID_MIN_LIKED_RATING = env.int("HYBRID_MIN_LIKED_RATING", default=7)
 HYBRID_MAX_CONTENT_SEEDS = env.int("HYBRID_MAX_CONTENT_SEEDS", default=20)
-HYBRID_CATALOG_CACHE_SECONDS = env.int("HYBRID_CATALOG_CACHE_SECONDS", default=300)
+HYBRID_CATALOG_CACHE_SECONDS = env.int("HYBRID_CATALOG_CACHE_SECONDS", default=86400)
+FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="http://127.0.0.1:5173").rstrip("/")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Cinephilia <noreply@cinephilia.local>")
+EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = env("EMAIL_HOST", default="")
+EMAIL_PORT = env.int("EMAIL_PORT", default=587)
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")

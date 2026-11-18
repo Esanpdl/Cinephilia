@@ -7,6 +7,7 @@ from apps.movies.models import Movie
 from apps.movies.services.presentation import MediaContextMixin
 from .serializers import RecommendationQuerySerializer, RecommendationSerializer
 from .services.hybrid.registry import catalog_snapshot, get_hybrid_service, user_history, watchlist_ids
+from .services.preferences import apply_preferences
 
 
 class RecommendationView(MediaContextMixin, GenericAPIView):
@@ -18,7 +19,10 @@ class RecommendationView(MediaContextMixin, GenericAPIView):
         params.is_valid(raise_exception=True)
         values = params.validated_data
         service = get_hybrid_service()
-        ranked, profile = service.rank(user_history(request.user), catalog_snapshot(), watchlist_ids(request.user) if values["exclude_watchlist"] else ())
+        history = user_history(request.user)
+        saved = watchlist_ids(request.user)
+        ranked, profile = service.rank(history, catalog_snapshot(), saved if values["exclude_watchlist"] else ())
+        ranked, profile = apply_preferences(request.user, history, ranked, profile, service.content, saved)
         limit = values["limit"]
         refresh_seed = values.get("refresh_seed")
         total_candidates = len(ranked)
@@ -51,7 +55,7 @@ class RecommendationView(MediaContextMixin, GenericAPIView):
         # One movie query plus one genre prefetch, independent of response size.
         movies = {movie.tmdb_id: movie for movie in Movie.objects.filter(tmdb_id__in=[entry.tmdb_id for entry in selected]).prefetch_related("genres")}
         result = {
-            "results": [{"movie": movies[entry.tmdb_id], "score": entry.score, "components": entry.components, "effective_weights": entry.effective_weights} for entry in selected if entry.tmdb_id in movies],
+            "results": [{"movie": movies[entry.tmdb_id], "score": entry.score, "components": entry.components, "effective_weights": entry.effective_weights, "reasons": getattr(entry, 'reasons', ())} for entry in selected if entry.tmdb_id in movies],
             "profile": profile,
             "models": {"content": service.content is not None, "collaborative": service.collaborative is not None},
             "configured_weights": service.weights,

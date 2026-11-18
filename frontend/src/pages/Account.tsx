@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
-import { KeyRound, Lock, LogOut, ShieldCheck, User as UserIcon } from 'lucide-react'
+import { KeyRound, Lock, LogOut, ShieldCheck, SlidersHorizontal, User as UserIcon } from 'lucide-react'
 import { useSession } from '../auth/SessionProvider'
 import { api, errorMessage } from '../api/client'
-import { genresQuery } from '../api/queries'
 import type { Profile, User } from '../api/types'
 import { Button } from '../components/ui'
 
@@ -12,12 +11,11 @@ export default function Account() {
   const { user, signOut } = useSession()
   const navigate = useNavigate()
   const cache = useQueryClient()
-  const genres = useQuery(genresQuery())
 
   // Profile mutation
   const saveProfile = useMutation({
-    mutationFn: (profile: Profile) => api<Profile>('/api/v1/users/me/profile/', { method: 'PATCH', body: profile }),
-    onSuccess: profile => { cache.setQueryData(['session'], { ...user!, profile } satisfies User) },
+    mutationFn: (profile: Partial<Profile>) => api<Profile>('/api/v1/users/me/profile/', { method: 'PATCH', body: profile }),
+    onSuccess: profile => { void cache.invalidateQueries({ queryKey: ['public-profile', user!.id] }); void cache.invalidateQueries({ queryKey: ['public-watchlist', user!.id] }); cache.setQueryData(['session'], { ...user!, profile } satisfies User) },
   })
 
   // Credentials mutation (username, email)
@@ -253,10 +251,16 @@ export default function Account() {
                   display_name: String(form.get('display_name') || ''),
                   bio: String(form.get('bio') || ''),
                   is_film_student: form.get('is_film_student') === 'on',
-                  favorite_genres: form.getAll('favorite_genres').map(Number),
+                  watchlist_public: form.get('watchlist_public') === 'on',
+                  email_public: form.get('email_public') === 'on',
                 })
               }}
             >
+              <p className="section-help">Your cinema profile and published reviews can be viewed by other people. Account credentials and private activity are not shown.</p>
+              <Link className="text-link" to={'/people/' + user!.id}>View your public cinema profile</Link>
+              <label className="checkbox-label"><input name="watchlist_public" type="checkbox" defaultChecked={user!.profile?.watchlist_public || false} /> Make my watchlist public</label>
+              <label className="checkbox-label"><input key={String(user!.profile?.email_public)} name="email_public" type="checkbox" defaultChecked={user!.profile?.email_public || false} disabled={!user!.email} /> Show my email address on my public profile</label>
+              <p className="section-help">Public email is visible to everyone. Changing your email makes it private again until you opt in. Add an email above to enable sharing.</p>
               <label className="field">
                 Display name
                 <input
@@ -283,28 +287,7 @@ export default function Account() {
                 />
                 I study film
               </label>
-              <fieldset className="genre-preferences">
-                <legend>Favorite genres <span className="optional">(optional)</span></legend>
-                {genres.isPending ? (
-                  <p>Loading genres…</p>
-                ) : genres.isError ? (
-                  <p className="inline-error">Genres could not be loaded.</p>
-                ) : (
-                  <div>
-                    {genres.data.map(genre => (
-                      <label key={genre.tmdb_id}>
-                        <input
-                          type="checkbox"
-                          name="favorite_genres"
-                          value={genre.tmdb_id}
-                          defaultChecked={Boolean(user?.profile?.favorite_genres?.includes(genre.tmdb_id))}
-                        />
-                        <span>{genre.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </fieldset>
+
 
               {saveProfile.isError && <p className="inline-error" role="alert">{errorMessage(saveProfile.error)}</p>}
               {saveProfile.isSuccess && <p className="save-notice" role="status">Your profile is saved.</p>}
@@ -312,7 +295,7 @@ export default function Account() {
               <Button
                 type="submit"
                 className="button-light"
-                disabled={saveProfile.isPending || genres.isPending || genres.isError}
+                disabled={saveProfile.isPending}
               >
                 {saveProfile.isPending ? 'Saving…' : 'Save profile'}
               </Button>
@@ -344,7 +327,8 @@ export default function Account() {
 
           <span className="eyebrow">Your point of view</span>
           <h2>A collection<br /><em>only you could make.</em></h2>
-          <p>Your film ratings shape your recommendations. These profile details are just a little more about you.</p>
+          <p>Preferences blend with your ratings and watchlist. They guide new accounts most strongly, then retain a modest influence as your activity grows. Editing them does not erase your history.</p>
+          <Link to="/preferences" className="button button-outline"><SlidersHorizontal size={16} /> Edit film preferences</Link>
 
           <Button
             className="button-outline"

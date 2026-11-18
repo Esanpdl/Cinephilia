@@ -11,18 +11,21 @@ class RecommendationQuerySerializer(serializers.Serializer):
 
 
 class ComponentSerializer(serializers.Serializer):
+    preferences = serializers.FloatField(required=False)
     content = serializers.FloatField(allow_null=True)
     collaborative = serializers.FloatField(allow_null=True)
     popularity = serializers.FloatField()
 
 
 class WeightSerializer(serializers.Serializer):
+    preferences = serializers.FloatField(required=False)
     content = serializers.FloatField()
     collaborative = serializers.FloatField()
     popularity = serializers.FloatField()
 
 
 class RecommendationItemSerializer(serializers.Serializer):
+    reasons = serializers.ListField(child=serializers.CharField(), required=False)
     movie = MovieSummarySerializer()
     score = serializers.FloatField()
     components = ComponentSerializer()
@@ -30,11 +33,13 @@ class RecommendationItemSerializer(serializers.Serializer):
 
 
 class RecommendationProfileSerializer(serializers.Serializer):
+    preference_weight = serializers.FloatField(required=False)
+    watchlist_movies = serializers.IntegerField(required=False)
     rated_movies = serializers.IntegerField()
     content_seed_count = serializers.IntegerField()
     collaborative_history_count = serializers.IntegerField()
     collaborative_available = serializers.BooleanField()
-    mode = serializers.ChoiceField(choices=["hybrid", "content", "collaborative", "popularity"])
+    mode = serializers.ChoiceField(choices=["hybrid", "content", "collaborative", "popularity", "preferences"])
 
 
 class ModelAvailabilitySerializer(serializers.Serializer):

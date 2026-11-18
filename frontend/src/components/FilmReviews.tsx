@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Star } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { api, ApiError, errorMessage } from '../api/client'
 import { useSession } from '../auth/SessionProvider'
 import type { Page, Review } from '../api/types'
@@ -51,6 +52,6 @@ export function FilmReviews({ movieId }: { movieId: number }) {
   // Removing the final review on a later page should return to an existing page.
   useEffect(() => { if (reviews.error instanceof ApiError && reviews.error.status === 404 && page > 1) setPage(page - 1) }, [reviews.error, page])
   return <section className="film-reviews" aria-label="Film reviews"><div className="section-heading compact"><div><p className="eyebrow">After the credits</p><h2>What <em>stayed.</em></h2></div><span className="muted-label">{reviews.data ? `${reviews.data.count} reviews` : 'Film reviews'}</span></div>
-    {reviews.isPending ? <p role="status">Opening the conversation…</p> : reviews.isError ? <PageError error={reviews.error} retry={() => { void reviews.refetch() }} /> : reviews.data.results.length ? <><div className="review-list">{reviews.data.results.map(review => <article className="review-card" key={review.id}><header><strong>{review.author}</strong><span className="review-stars" aria-label={review.stars + ' out of 5 stars'}><Star size={15} fill="currentColor" /> {review.stars}/5</span><time dateTime={review.updated_at}>{new Date(review.updated_at).toLocaleDateString()}</time></header><p>{review.text}</p></article>)}</div><Pagination page={page} count={reviews.data.count} onPage={setPage} /></> : <p className="review-guidance">No written reviews yet. Sign in to share what this film meant to you.</p>}
+    {reviews.isPending ? <p role="status">Opening the conversation…</p> : reviews.isError ? <PageError error={reviews.error} retry={() => { void reviews.refetch() }} /> : reviews.data.results.length ? <><div className="review-list">{reviews.data.results.map(review => <article className="review-card" key={review.id}><header><strong>{review.author_id ? <Link to={'/people/' + review.author_id}>{review.author}</Link> : review.author}</strong><span className="review-stars" aria-label={review.stars + ' out of 5 stars'}><Star size={15} fill="currentColor" /> {review.stars}/5</span><time dateTime={review.updated_at}>{new Date(review.updated_at).toLocaleDateString()}</time></header><p>{review.text}</p></article>)}</div><Pagination page={page} count={reviews.data.count} onPage={setPage} /></> : <p className="review-guidance">No written reviews yet. Sign in to share what this film meant to you.</p>}
   </section>
 }

@@ -38,7 +38,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   return <Context.Provider value={{
     user: session.data, loading: session.isPending, error: session.error, retry: () => { void session.refetch() },
     acceptSession: async response => { await clearPrivate(); queryClient.setQueryData(['session'], response.user); announce() },
-    signOut: async () => { await api('/api/v1/users/logout/', { method: 'POST' }); await clearPrivate(); resetCsrf(); queryClient.setQueryData(['session'], null); announce() },
+    signOut: async () => {
+      try { await api('/api/v1/users/logout/', { method: 'POST' }) }
+      finally { await clearPrivate(); resetCsrf(); queryClient.setQueryData(['session'], null); announce() }
+    },
   }}>{children}</Context.Provider>
 }
 

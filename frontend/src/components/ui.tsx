@@ -24,7 +24,10 @@ export function Pagination({ page, count, pageSize = 20, onPage, disabled = fals
   if (pages <= 1) return null
   return <nav className="pagination" aria-label="Pagination">
     <Button className="button-outline" disabled={page <= 1 || disabled} onClick={() => onPage(page - 1)}><ArrowLeft size={16} /> Previous</Button>
-    <span>Page <strong>{page}</strong> of {pages.toLocaleString()}</span>
+    <form className="page-jump" onSubmit={event => { event.preventDefault(); const value = Number(new FormData(event.currentTarget).get('page')); if (Number.isInteger(value) && value >= 1 && value <= pages) onPage(value) }}>
+      <label>Page <input key={`${page}-${pages}`} aria-label="Page number" name="page" type="number" min={1} max={pages} step={1} defaultValue={page} required disabled={disabled} /></label>
+      <span>of {pages.toLocaleString()}</span>
+    </form>
     <Button className="button-outline" disabled={page >= pages || disabled} onClick={() => onPage(page + 1)}>Next <ArrowRight size={16} /></Button>
   </nav>
 }
@@ -54,4 +57,3 @@ export function StarRating({ value, max = 5, size = 15, className = '' }: { valu
     </span>
   )
 }
-

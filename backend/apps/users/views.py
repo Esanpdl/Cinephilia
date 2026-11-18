@@ -1,4 +1,15 @@
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import password_validation
+from django.contrib.auth.tokens import default_token_generator
+from django.core.cache import cache
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.mail import send_mail
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+from django.conf import settings
+from django.contrib.auth import get_user_model
+import hashlib
+import time
 from django.db import IntegrityError, transaction
 from django.middleware.csrf import get_token
 from drf_spectacular.utils import extend_schema
@@ -6,7 +17,7 @@ from rest_framework import generics, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.throttling import ScopedRateThrottle, BaseThrottle
 from rest_framework.views import APIView
 
 from .authentication import CsrfSessionAuthentication
@@ -19,6 +30,8 @@ from .serializers import (
     SessionSerializer,
     UpdateCredentialsSerializer,
     UserSerializer,
+    PasswordResetRequestSerializer,
+    PasswordResetConfirmSerializer,
 )
 from .services.profiles import get_or_create_profile
 
@@ -29,6 +42,37 @@ class AuthView(APIView):
     throttle_classes = [ScopedRateThrottle]
 
 
+class RegistrationThrottle(BaseThrottle):
+    """Limit successful signups separately from correctable invalid form attempts."""
+    success_limit = 5
+    failure_limit = 30
+    window = 3600
+
+    def allow_request(self, request, view):
+        ident = hashlib.sha256(self.get_ident(request).encode()).hexdigest()[:32]
+        self.success_key = f'auth:register:success:{ident}'
+        self.failure_key = f'auth:register:failure:{ident}'
+        self.now = time.time()
+        self.successes = [t for t in cache.get(self.success_key, []) if self.now - t < self.window]
+        self.failures = [t for t in cache.get(self.failure_key, []) if self.now - t < self.window]
+        exceeded = len(self.successes) >= self.success_limit or len(self.failures) >= self.failure_limit
+        self.retry_after = max(1, int(self.window - (self.now - min(self.successes if len(self.successes) >= self.success_limit else self.failures)))) if exceeded else 0
+        return not exceeded
+
+    def wait(self):
+        return self.retry_after
+
+    def record_failure(self):
+        self._record(self.failure_key, self.failures, self.now)
+
+    def record_success(self):
+        self._record(self.success_key, self.successes, self.now)
+
+    def _record(self, key, history, value):
+        history.append(value)
+        cache.set(key, history, self.window)
+
+
 class CsrfView(AuthView):
     @extend_schema(responses=CsrfSerializer, description="Sets the CSRF cookie. Send csrf_token in X-CSRFToken with every unsafe request and include session cookies.")
     def get(self, request):
@@ -36,19 +80,31 @@ class CsrfView(AuthView):
 
 
 class RegisterView(AuthView):
-    throttle_scope = "register"
+    throttle_classes = []
+
+    def check_throttles(self, request):
+        throttle = RegistrationThrottle()
+        if not throttle.allow_request(request, self):
+            self.throttled(request, throttle.wait())
+        self.registration_throttle = throttle
 
     @extend_schema(request=RegisterSerializer, responses={201: SessionSerializer}, description="Create a normal account and sign in. CSRF is required even before login. Email is optional and is not verified.")
     def post(self, request):
         if request.user.is_authenticated:
             raise ValidationError("Log out before registering another account.")
         serializer = RegisterSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except ValidationError:
+            self.registration_throttle.record_failure()
+            raise
         try:
             with transaction.atomic():
                 user = serializer.save()
         except IntegrityError:
+            self.registration_throttle.record_failure()
             raise ValidationError({"username": "This username is unavailable."}) from None
+        self.registration_throttle.record_success()
         login(request, user, backend="django.contrib.auth.backends.ModelBackend")
         return Response({"user": UserSerializer(user).data, "csrf_token": get_token(request)}, status=status.HTTP_201_CREATED)
 
@@ -56,7 +112,7 @@ class RegisterView(AuthView):
 class LoginView(AuthView):
     throttle_scope = "login"
 
-    @extend_schema(request=LoginSerializer, responses=SessionSerializer, description="Sign in with username/password and a CSRF token. Login rotates the token; use the returned token for later writes.")
+    @extend_schema(request=LoginSerializer, responses=SessionSerializer, description="Sign in with username or a unique email address and a password. A CSRF token is required; login rotates it, so use the returned token for later writes.")
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -66,6 +122,60 @@ class LoginView(AuthView):
         get_or_create_profile(user)
         login(request, user)
         return Response({"user": UserSerializer(user).data, "csrf_token": get_token(request)})
+
+
+class PasswordResetRequestView(AuthView):
+    throttle_scope = "password_reset"
+
+    @extend_schema(request=PasswordResetRequestSerializer, responses={200: None})
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+        User = get_user_model()
+        matches = list(User.objects.filter(email__iexact=email, is_active=True).exclude(password='').only('id', 'email', 'password', 'username', 'last_login')[:2])
+        # Legacy data may contain duplicate emails. Never send reset links to multiple
+        # accounts for one address; users can still sign in with their username.
+        for user in matches[:1] if len(matches) == 1 else []:
+            if not user.has_usable_password():
+                continue
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+            url = f"{settings.FRONTEND_BASE_URL}/reset-password?uid={uid}&token={token}"
+            try:
+                send_mail('Reset your Cinephilia password',
+                          f"Use this link to choose a new password. It expires after use:\n\n{url}\n\nIf you did not request this, you can ignore this email.",
+                          settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
+            except Exception:
+                import logging
+                logging.getLogger(__name__).exception('Password reset email delivery failed.')
+        return Response({'detail': 'If an active account uses that email, password reset instructions have been sent.'})
+
+
+class PasswordResetConfirmView(AuthView):
+    throttle_scope = 'password_reset_confirm'
+
+    @extend_schema(request=PasswordResetConfirmSerializer, responses={200: None})
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        User = get_user_model()
+        from django.utils.http import urlsafe_base64_decode
+        try:
+            uid = urlsafe_base64_decode(data['uid']).decode()
+            user = User.objects.get(pk=uid, is_active=True)
+        except (ValueError, TypeError, User.DoesNotExist):
+            raise ValidationError({'token': 'This password reset link is invalid or has expired.'}) from None
+        if not default_token_generator.check_token(user, data['token']):
+            raise ValidationError({'token': 'This password reset link is invalid or has expired.'})
+        try:
+            password_validation.validate_password(data['password'], user)
+        except DjangoValidationError as error:
+            raise ValidationError({'password': error.messages}) from None
+        user.set_password(data['password'])
+        user.save(update_fields=['password'])
+        return Response({'detail': 'Your password has been changed.'})
 
 
 class LogoutView(AuthView):

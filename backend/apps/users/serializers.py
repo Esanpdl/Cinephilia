@@ -23,7 +23,13 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        fields = ["display_name", "bio", "is_film_student", "favorite_genres"]
+        fields = ["display_name", "bio", "is_film_student", "favorite_genres", "onboarding_status", "watchlist_public", "email_public"]
+        read_only_fields = ["onboarding_status"]
+
+    def validate_favorite_genres(self, value):
+        if len(value) > 5 or len({g.pk for g in value}) != len(value):
+            raise serializers.ValidationError("Choose at most five different genres.")
+        return value
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -88,7 +94,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(**validated_data)
         profile = get_or_create_profile(user)
         profile.display_name, profile.is_film_student = display_name, film_student
-        profile.save(update_fields=["display_name", "is_film_student", "updated_at"])
+        profile.onboarding_status = "pending"
+        profile.save(update_fields=["display_name", "is_film_student", "onboarding_status", "updated_at"])
         return user
 
 
@@ -126,6 +133,10 @@ class UpdateCredentialsSerializer(serializers.Serializer):
 
     def update(self, instance, validated_data):
         is_main = is_main_admin_user(instance)
+        if 'email' in validated_data and validated_data['email'] != instance.email:
+            # Publishing the old address is not consent to publish a new one.
+            Profile.objects.filter(user=instance).update(email_public=False)
+            instance._state.fields_cache.pop('profile', None)
         if "username" in validated_data:
             instance.username = validated_data["username"]
         if "email" in validated_data:
@@ -178,6 +189,34 @@ class ChangePasswordSerializer(serializers.Serializer):
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
     password = serializers.CharField(write_only=True, trim_whitespace=False, max_length=128)
+
+    def validate_username(self, value):
+        """Accept email as a login identifier while authenticating by canonical username."""
+        User = get_user_model()
+        matches = list(User.objects.filter(email__iexact=value).only('username')[:2])
+        # Email is optional and legacy accounts may share one. Only treat a
+        # unique address as a login alias; otherwise preserve username lookup.
+        return matches[0].username if len(matches) == 1 else value
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField(max_length=254)
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    uid = serializers.CharField(max_length=128)
+    token = serializers.CharField(max_length=256)
+    password = serializers.CharField(write_only=True, trim_whitespace=False, max_length=128)
+    confirm_password = serializers.CharField(write_only=True, trim_whitespace=False, max_length=128)
+
+    def validate(self, attrs):
+        if attrs['password'] != attrs['confirm_password']:
+            raise serializers.ValidationError({'confirm_password': 'Passwords do not match.'})
+        try:
+            validate_custom_password(attrs['password'])
+        except DjangoValidationError as err:
+            raise serializers.ValidationError({'password': err.messages if hasattr(err, 'messages') else str(err)})
+        return attrs
 
 
 class CsrfSerializer(serializers.Serializer):

@@ -30,6 +30,7 @@ class AdminUserListItemSerializer(serializers.ModelSerializer):
             "is_staff",
             "is_superuser",
             "is_main_admin",
+            "is_active",
             "display_name",
             "is_film_student",
             "date_joined",
